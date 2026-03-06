@@ -5,5 +5,6 @@
     <event on="onSiteDeactivate" fire="\QUI\Tags\Site::onSiteDeactivate"/>
     <event on="onSiteLoad" fire="\QUI\Tags\Site::onLoad"/>
     <event on="onSiteDestroy" fire="\QUI\Tags\Site::onDestroy"/>
+    <event on="onSmartyInit" fire="\QUI\Tags\EventHandler::onSmartyInit"/>
     <event on="onAdminLoadFooter" fire="\QUI\Tags\EventHandler::onAdminLoadFooter"/>
 </events>
