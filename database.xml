@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
-
     <projects>
-
         <table name="tags" no-auto-update="1" no-site-reference="1">
             <field type="varchar( 255 ) NOT NULL PRIMARY KEY">tag</field>
             <field type="varchar( 255 ) NOT NULL">title</field>
@@ -11,7 +9,6 @@
             <field type="varchar( 20 ) DEFAULT NULL">url</field>
             <field type="int( 1 ) DEFAULT 0">generated</field>
             <field type="varchar( 255 ) DEFAULT NULL">generator</field>
-
             <primary>tag</primary>
             <index>title</index>
         </table>
@@ -27,7 +24,6 @@
             <field type="int( 1 ) DEFAULT 0">generated</field>
             <field type="varchar( 255 ) DEFAULT NULL">generator</field>
             <field type="bigint( 20 ) NULL">parentId</field>
-
             <auto_increment>id</auto_increment>
             <index>title</index>
             <index>parentId</index>
@@ -37,7 +33,6 @@
             <field type="bigint( 20 ) NOT NULL PRIMARY KEY">id</field>
             <field type="MEDIUMTEXT">tags</field>
             <field type="MEDIUMINT UNSIGNED NOT NULL">count</field>
-
             <primary>id</primary>
         </table>
 
@@ -56,17 +51,13 @@
             <field type="text NULL">tags</field>
             <field type="timestamp NULL DEFAULT NULL">c_date</field>
             <field type="timestamp DEFAULT NOW() ON UPDATE NOW()">e_date</field>
-
             <primary>id</primary>
         </table>
 
         <table name="tags_sites" no-auto-update="1" no-site-reference="1">
             <field type="bigint( 20 ) NOT NULL">id</field>
             <field type="text NULL">tags</field>
-
             <primary>id</primary>
         </table>
-
     </projects>
-
 </database>
