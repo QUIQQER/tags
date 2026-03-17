@@ -115,11 +115,13 @@ if (!empty($requestTags)) {
         $sqlParams['limit'] = 10;
     }
 
-    $result = $Manager->getSitesFromTags($tags, [
-        'limit' => $sqlParams['limit']
-    ]);
+    $limit = (int)$sqlParams['limit'];
+    $start = isset($sqlParams['start']) ? (int)$sqlParams['start'] : 0;
 
-    $count = count($Manager->getSiteIdsFromTags($tags));
+    $count = $Manager->getSiteCountFromTags($tags);
+    $result = $Manager->getSitesFromTags($tags, [
+        'limit' => $start . ',' . $limit
+    ]);
 }
 
 if ($Pagination->getAttribute('limit')) {

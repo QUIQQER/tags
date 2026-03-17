@@ -58,15 +58,13 @@ class SiteTags extends QUI\Control
 
         $Project = $Site->getProject();
         $Tags = new QUI\Tags\Manager($Project);
-        $tags = $Site->getAttribute('quiqqer.tags.tagList');
+        $tags = $Tags->getSiteTags($Site->getId());
         $tagList = [];
 
-        if (is_array($tags)) {
-            foreach ($tags as $tag) {
-                try {
-                    $tagList[] = $Tags->get($tag);
-                } catch (QUI\Exception) {
-                }
+        foreach ($tags as $tag) {
+            try {
+                $tagList[] = $Tags->get($tag);
+            } catch (QUI\Exception) {
             }
         }
 

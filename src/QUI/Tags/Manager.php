@@ -43,6 +43,20 @@ use function ucwords;
 class Manager
 {
     /**
+     * Request-local cache for site ids per tag combination.
+     *
+     * @var array<string, array<int, int>>
+     */
+    protected static array $siteIdsFromTagsCache = [];
+
+    /**
+     * Request-local cache for site tags.
+     *
+     * @var array<string, list<string>>
+     */
+    protected static array $siteTagsCache = [];
+
+    /**
      * Project
      *
      * @var Project
@@ -796,54 +810,63 @@ class Manager
             return [];
         }
 
-        // search string
-        $where = '';
+        sort($tagList);
 
-        for ($i = 0, $len = count($tagList); $i < $len; $i++) {
-            $where .= ' tag = "' . $tagList[$i] . '"';
+        $cacheKey = $this->getProjectCacheKey() . '/siteIds/' . implode(',', $tagList);
 
-            if ($i != $len - 1) {
-                $where .= ' OR ';
+        if (!isset(self::$siteIdsFromTagsCache[$cacheKey])) {
+            // search string
+            $where = '';
+
+            for ($i = 0, $len = count($tagList); $i < $len; $i++) {
+                $where .= ' tag = "' . $tagList[$i] . '"';
+
+                if ($i != $len - 1) {
+                    $where .= ' OR ';
+                }
+            }
+
+            try {
+                $result = QUI::getDataBase()->fetch([
+                    'from' => $cacheTable,
+                    'where' => $where
+                ]);
+            } catch (QUI\Exception $Exception) {
+                QUI\System\Log::addError($Exception->getMessage());
+
+                return [];
+            }
+
+            if (!isset($result[0])) {
+                self::$siteIdsFromTagsCache[$cacheKey] = [];
+            } else {
+                $ids = [];
+
+                // filter double tags
+                foreach ($result as $entry) {
+                    $list = explode(',', $entry['sites']);
+
+                    foreach ($list as $id) {
+                        $id = (int)$id;
+
+                        if (!$id) {
+                            continue;
+                        }
+
+                        if (!isset($ids[$id])) {
+                            $ids[$id] = 0;
+                        }
+
+                        $ids[$id]++;
+                    }
+                }
+
+                arsort($ids);
+                self::$siteIdsFromTagsCache[$cacheKey] = $ids;
             }
         }
 
-        try {
-            $result = QUI::getDataBase()->fetch([
-                'from' => $cacheTable,
-                'where' => $where
-            ]);
-        } catch (QUI\Exception $Exception) {
-            QUI\System\Log::addError($Exception->getMessage());
-
-            return [];
-        }
-
-        if (!isset($result[0])) {
-            return [];
-        }
-
-        $ids = [];
-
-        // filter double tags
-        foreach ($result as $entry) {
-            $list = explode(',', $entry['sites']);
-
-            foreach ($list as $id) {
-                $id = (int)$id;
-
-                if (!$id) {
-                    continue;
-                }
-
-                if (!isset($ids[$id])) {
-                    $ids[$id] = 0;
-                }
-
-                $ids[$id]++;
-            }
-        }
-
-        arsort($ids);
+        $ids = self::$siteIdsFromTagsCache[$cacheKey];
 
         if (isset($params['limit']) && $params['limit']) {
             if (!str_contains($params['limit'], ',')) {
@@ -863,6 +886,35 @@ class Manager
     }
 
     /**
+     * Return the number of sites that have the tags.
+     *
+     * @param array<int, string> $tags
+     * @return int
+     */
+    public function getSiteCountFromTags(array $tags): int
+    {
+        $tagList = [];
+
+        foreach ($tags as $tag) {
+            if ($this->existsTag($tag)) {
+                $tagList[] = $tag;
+            }
+        }
+
+        $tagList = array_values(array_unique($tagList));
+
+        if (empty($tagList)) {
+            return 0;
+        }
+
+        if (count($tagList) === 1) {
+            return $this->getTagCount($tagList[0]);
+        }
+
+        return count($this->getSiteIdsFromTags($tagList));
+    }
+
+    /**
      * Return all sites that have the tags
      *
      * @param array<int, string> $tags - list of tags
@@ -878,7 +930,6 @@ class Manager
         foreach ($siteIds as $id => $count) {
             try {
                 $Child = $this->Project->get($id);
-                $Child->load('quiqqer/tags');
 
                 $result[] = $Child;
             } catch (QUI\Exception) {
@@ -1032,6 +1083,9 @@ class Manager
             ['id' => $siteId]
         );
 
+        self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . $siteId] = $list;
+        $this->clearSiteIdsFromTagsRequestCache();
+
         // if side is not active, don't generate the cache
         if (!$isActive) {
             $this->removeSiteFromTags($siteId, $list);
@@ -1092,6 +1146,8 @@ class Manager
      */
     public function removeSiteFromTags(int $siteId, array $tags): void
     {
+        $this->clearSiteIdsFromTagsRequestCache();
+
         // cleanup tag cache
         $tableTagCache = QUI::getDBProjectTableName(
             'tags_cache',
@@ -1168,6 +1224,9 @@ class Manager
             $this->Project
         );
 
+        unset(self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . (int)$siteId]);
+        $this->clearSiteIdsFromTagsRequestCache();
+
         try {
             QUI::getDataBase()->delete($table, [
                 'id' => $siteId
@@ -1186,6 +1245,12 @@ class Manager
      */
     public function getSiteTags(int $siteId): array
     {
+        $cacheKey = $this->getProjectCacheKey() . '/site/' . $siteId;
+
+        if (isset(self::$siteTagsCache[$cacheKey])) {
+            return self::$siteTagsCache[$cacheKey];
+        }
+
         try {
             $result = QUI::getDataBase()->fetch([
                 'from' => QUI::getDBProjectTableName('tags_sites', $this->Project),
@@ -1201,13 +1266,16 @@ class Manager
         }
 
         if (!isset($result[0])) {
+            self::$siteTagsCache[$cacheKey] = [];
+
             return [];
         }
 
         $tags = str_replace(',,', ',', $result[0]['tags']);
         $tags = trim($tags, ',');
+        self::$siteTagsCache[$cacheKey] = empty($tags) ? [] : explode(',', $tags);
 
-        return explode(',', $tags);
+        return self::$siteTagsCache[$cacheKey];
     }
 
     /**
@@ -1238,5 +1306,29 @@ class Manager
         }
 
         return $result[0]['count'];
+    }
+
+    /**
+     * @return string
+     */
+    protected function getProjectCacheKey(): string
+    {
+        return $this->Project->getName() . '/' . $this->Project->getLang();
+    }
+
+    /**
+     * Clear request-local tag-to-site cache for this project.
+     *
+     * @return void
+     */
+    protected function clearSiteIdsFromTagsRequestCache(): void
+    {
+        $prefix = $this->getProjectCacheKey() . '/siteIds/';
+
+        foreach (array_keys(self::$siteIdsFromTagsCache) as $cacheKey) {
+            if (str_starts_with($cacheKey, $prefix)) {
+                unset(self::$siteIdsFromTagsCache[$cacheKey]);
+            }
+        }
     }
 }
