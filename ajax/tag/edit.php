@@ -14,7 +14,7 @@
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_tag_edit',
     function (
         $projectName,

@@ -12,7 +12,7 @@
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_exists',
     function ($project, $groupId) {
         return QUI\Tags\Groups\Handler::exists(

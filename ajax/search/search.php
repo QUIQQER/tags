@@ -15,7 +15,7 @@
  *
  * @return string
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_search_search',
     function (
         $projectName,

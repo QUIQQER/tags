@@ -6,7 +6,7 @@
 
 use QUI\Tags\Groups\Group;
 
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_search_getTagsByGroup',
     function ($project, $groupId, $recursive = 1) {
         $Project = QUI::getProjectManager()->decode($project);

@@ -13,7 +13,7 @@
  *
  * @return bool
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_tag_exists',
     function ($projectName, $projectLang, $tag) {
         $Tags = new QUI\Tags\Manager(

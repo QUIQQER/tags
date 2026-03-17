@@ -18,7 +18,7 @@ use QUI\Utils\Security\Orthos;
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_tag_getSites',
     function ($projectName, $projectLang, $tag, $searchParams) {
         $Project = QUI::getProject($projectName, $projectLang);
