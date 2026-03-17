@@ -22,7 +22,7 @@ class Cron
     /**
      * creates the tag cache
      *
-     * @param array $params
+     * @param array<string, mixed> $params
      * @param QUI\Cron\Manager $CronManager
      */
     public static function createCache(array $params, $CronManager): void
@@ -42,7 +42,11 @@ class Cron
         $tableSites = QUI::getDBProjectTableName('tags_sites', $Project);
         $tableSiteCache = QUI::getDBProjectTableName('tags_siteCache', $Project);
         $tableCache = QUI::getDBProjectTableName('tags_cache', $Project);
+        $Table = $DataBase->table();
 
+        if ($Table === null) {
+            return;
+        }
 
         // get ids
         $result = $DataBase->fetch([
@@ -80,7 +84,7 @@ class Cron
         /**
          * Tag cache
          */
-        $DataBase->table()->truncate($tableCache);
+        $Table->truncate($tableCache);
 
         foreach ($list as $tag => $entry) {
             $siteIds = [];
@@ -108,7 +112,7 @@ class Cron
         /**
          * Sites cache
          */
-        $DataBase->table()->truncate($tableSiteCache);
+        $Table->truncate($tableSiteCache);
 
         foreach ($result as $entry) {
             if (empty($entry['tags'])) {

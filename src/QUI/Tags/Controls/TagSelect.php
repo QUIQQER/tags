@@ -22,15 +22,13 @@ class TagSelect extends QUI\Control
 {
     /**
      * Current Project
-     *
-     * @var ?QUI\Projects\Project
      */
-    protected ?QUI\Projects\Project $Project = null;
+    protected QUI\Projects\Project $Project;
 
     /**
      * constructor
      *
-     * @param array $attributes
+     * @param array<string, mixed> $attributes
      * @throws QUI\Exception
      */
     public function __construct(array $attributes = [])
@@ -41,7 +39,13 @@ class TagSelect extends QUI\Control
         ) {
             $this->Project = $attributes['Project'];
         } else {
-            $this->Project = QUI::getRewrite()->getSite()->getProject();
+            $Site = QUI::getRewrite()->getSite();
+
+            if ($Site === null) {
+                throw new QUI\Exception('No site available for tag select project resolution');
+            }
+
+            $this->Project = $Site->getProject();
         }
 
         $this->setAttributes([
@@ -79,7 +83,7 @@ class TagSelect extends QUI\Control
     /**
      * Get all tag groups
      *
-     * @return array
+     * @return list<array{id: int, title: string, tags: list<array<string, mixed>>, priority: int}>
      * @throws Exception
      */
     public function getChildren(): array

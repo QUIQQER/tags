@@ -29,7 +29,7 @@ QUI::getAjax()->registerFunction(
 
         if (!empty($group) && is_numeric($group)) {
             try {
-                $TagGroup = QUI\Tags\Groups\Handler::get($Project, $group);
+                $TagGroup = QUI\Tags\Groups\Handler::get($Project, (int)$group);
                 return $TagGroup->searchTags($search);
             } catch (QUI\Exception) {
                 return $Tags->searchTags($search, json_decode($params, true));

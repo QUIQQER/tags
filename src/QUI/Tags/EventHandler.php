@@ -30,7 +30,7 @@ class EventHandler
 
         $Package = QUI::getPackageManager()->getInstalledPackage('quiqqer/tags');
         $Config = $Package->getConfig();
-        $useGroups = $Config->getValue('tags', 'useGroups') ? 1 : 0;
+        $useGroups = $Config?->getValue('tags', 'useGroups') ? 1 : 0;
 
         echo '<script>window.QUIQQER_TAGS_USE_GROUPS = "' . $useGroups . '"</script>';
     }

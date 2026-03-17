@@ -52,19 +52,19 @@ class Manager
     /**
      * tag list
      *
-     * @var array
+     * @var array<string, array<string, mixed>>
      */
     protected array $tags = [];
 
     /**
      * tag list - only for exists check
      *
-     * @var array
+     * @var array<string, bool>
      */
     protected array $exists = [];
 
     /**
-     * @var array
+     * @var array<string, list<array<string, mixed>>>
      */
     protected array $groupsFromTags = [];
 
@@ -82,7 +82,7 @@ class Manager
      * Add a tag
      *
      * @param string $tag
-     * @param array $params
+     * @param array<string, mixed> $params
      *
      * @return string - Tag
      *
@@ -95,6 +95,10 @@ class Manager
 
         $title = Orthos::removeHTML($tag);
         $title = Orthos::clearFormRequest($title);
+
+        if (!is_string($title)) {
+            $title = '';
+        }
 
         if ($this->existsTagTitle($title)) {
             throw new QUI\Tags\Exception([
@@ -147,6 +151,11 @@ class Manager
         $str = Orthos::clear($str);
         $str = ucwords(mb_strtolower($str));
         $str = preg_replace('/[^a-zA-Z0-9]/', '', $str);
+
+        if (!is_string($str)) {
+            $str = '';
+        }
+
         $str = substr($str, 0, 250);
 
         return trim($str);
@@ -226,7 +235,7 @@ class Manager
      * Edit a tag
      *
      * @param string $tag
-     * @param array $params
+     * @param array<string, mixed> $params
      *
      * @throws QUI\Tags\Exception
      * @throws QUI\Permissions\Exception
@@ -397,7 +406,7 @@ class Manager
      * Return a tag
      *
      * @param string $tag
-     * @return array
+     * @return array<string, mixed>
      *
      * @throws QUI\Tags\Exception
      */
@@ -451,7 +460,7 @@ class Manager
      * Return a tag by title
      *
      * @param string $title
-     * @return array - tag attributes
+     * @return array<string, mixed> - tag attributes
      * @throws QUI\Exception
      */
     public function getByTitle(string $title): array
@@ -489,7 +498,7 @@ class Manager
      * Return a tag by generator
      *
      * @param string $generator
-     * @return array - tag attributes
+     * @return array<string, mixed> - tag attributes
      * @throws QUI\Exception
      */
     public function getByGenerator(string $generator): array
@@ -527,9 +536,9 @@ class Manager
      * Return all tags from a project
      * if params set, the return is a grid result array
      *
-     * @param array $params - Grid Params
+     * @param array<string, mixed> $params - Grid Params
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function getList(array $params = []): array
     {
@@ -610,9 +619,9 @@ class Manager
      * Gibt die Tags, welche in "Beziehung" zu diesem Tag stehen, zurück
      * D.h. Welche Tags die Suche verkleinern können um noch Ergebnisse zu bekommen
      *
-     * @param array $tags
+     * @param array<int, string> $tags
      *
-     * @return array
+     * @return list<string>
      */
     public function getRelationTags(array $tags): array
     {
@@ -644,7 +653,7 @@ class Manager
         }
 
         if (!isset($result[0])) {
-            return $tags;
+            return array_values($tags);
         }
 
         $ids = [];
@@ -722,9 +731,9 @@ class Manager
      * Search similar tags
      *
      * @param string $search - Search string
-     * @param array $queryParams - optional, query params order, limit
+     * @param array<string, mixed> $queryParams - optional, query params order, limit
      *
-     * @return array
+     * @return array<int, array<string, mixed>>
      */
     public function searchTags(string $search, array $queryParams = []): array
     {
@@ -765,10 +774,10 @@ class Manager
     /**
      * Return all site ids that have the tags
      *
-     * @param array $tags - list of tags
-     * @param array $params - Database params , only limit
+     * @param array<int, string> $tags - list of tags
+     * @param array<string, mixed> $params - Database params , only limit
      *
-     * @return array
+     * @return array<int, int>
      */
     public function getSiteIdsFromTags(array $tags, array $params = []): array
     {
@@ -856,10 +865,10 @@ class Manager
     /**
      * Return all sites that have the tags
      *
-     * @param array $tags - list of tags
-     * @param array $params - Database params
+     * @param array<int, string> $tags - list of tags
+     * @param array<string, mixed> $params - Database params
      *
-     * @return array
+     * @return list<QUI\Projects\Site>
      */
     public function getSitesFromTags(array $tags, array $params = []): array
     {
@@ -884,7 +893,7 @@ class Manager
      * Return all parent groups from the tag
      *
      * @param string $tag
-     * @return array
+     * @return list<array<string, mixed>>
      */
     public function getGroupsFromTag(string $tag): array
     {
@@ -893,6 +902,11 @@ class Manager
         }
 
         $PDO = QUI::getDataBase()->getPDO();
+
+        if ($PDO === null) {
+            return [];
+        }
+
         $table = QUI::getDBProjectTableName('tags_groups', $this->Project);
 
         $query = "
@@ -912,7 +926,7 @@ class Manager
 
         try {
             $Statement->execute();
-            $this->groupsFromTags[$tag] = $Statement->fetchAll(PDO::FETCH_ASSOC);
+            $this->groupsFromTags[$tag] = array_values($Statement->fetchAll(PDO::FETCH_ASSOC));
 
             return $this->groupsFromTags[$tag];
         } catch (\Exception $Exception) {
@@ -977,7 +991,7 @@ class Manager
      * Set tags to a site
      *
      * @param string|int $siteId - id of the Site ID
-     * @param array $tags - Tag List
+     * @param array<int, string> $tags - Tag List
      */
     public function setSiteTags(string | int $siteId, array $tags): void
     {
@@ -1074,7 +1088,7 @@ class Manager
      * Remove the site from the tags
      *
      * @param integer $siteId
-     * @param array $tags
+     * @param array<int, string> $tags
      */
     public function removeSiteFromTags(int $siteId, array $tags): void
     {
@@ -1168,7 +1182,7 @@ class Manager
      *
      * @param integer $siteId
      *
-     * @return array
+     * @return list<string>
      */
     public function getSiteTags(int $siteId): array
     {

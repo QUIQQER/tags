@@ -60,7 +60,7 @@ $requestList = QUI::getRewrite()->getUrlParamsList();
 $requestTags = [];
 $requestTagNames = [];
 
-if (isset($_GET['tags']) && !empty($_GET['tags'])) {
+if (!empty($_GET['tags'])) {
     $requestList = explode('-', $_GET['tags']);
 }
 
