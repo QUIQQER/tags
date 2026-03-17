@@ -12,7 +12,7 @@
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_search_getBySektor',
     function ($project, $sektor) {
         return QUI\Tags\Groups\Handler::getBySektor(

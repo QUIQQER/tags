@@ -13,7 +13,7 @@
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_tag_getData',
     function ($projectName, $projectLang, $tag) {
         $Tags = new QUI\Tags\Manager(

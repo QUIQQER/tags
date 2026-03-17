@@ -12,7 +12,7 @@
 
 use QUI\Tags\Groups\Handler as TagGroupsHandler;
 
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_project_getList',
     function (
         $projectName,

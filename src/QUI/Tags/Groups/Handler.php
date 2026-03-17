@@ -10,6 +10,7 @@ use QUI;
 use QUI\Permissions\Exception;
 use QUI\Projects\Project;
 
+use function array_values;
 use function strnatcasecmp;
 use function usort;
 
@@ -23,14 +24,14 @@ class Handler
     /**
      * instantiated groups
      *
-     * @var array
+     * @var array<string, array<string, array<int, Group>>>
      */
     protected static array $groups = [];
 
     /**
      * Category tree runtime cache
      *
-     * @var array
+     * @var array<string, array<string, list<array<string, mixed>>>>
      */
     protected static array $trees = [];
 
@@ -49,7 +50,7 @@ class Handler
             return false;
         }
 
-        return !empty($Config->getValue('tags', 'useGroups'));
+        return !empty($Config?->getValue('tags', 'useGroups'));
     }
 
     /**
@@ -84,7 +85,11 @@ class Handler
             ['title' => QUI\Utils\Security\Orthos::cleanHTML($title)]
         );
 
-        $gid = QUI::getDataBase()->getPDO()->lastInsertId();
+        $gid = QUI::getDataBase()->getPDO()?->lastInsertId();
+
+        if ($gid === null) {
+            throw new QUI\Database\Exception('Database connection unavailable');
+        }
 
         return self::get($Project, (int)$gid);
     }
@@ -93,7 +98,7 @@ class Handler
      * Count the tag groups
      *
      * @param Project $Project
-     * @param array $queryParams
+     * @param array<string, mixed> $queryParams
      * @return int
      *
      * @throws QUI\Database\Exception
@@ -179,8 +184,8 @@ class Handler
      *
      * @param Project $Project
      * @param string $search - search string
-     * @param array $queryParams -  optional, query params order, limit
-     * @return array
+     * @param array<string, mixed> $queryParams -  optional, query params order, limit
+     * @return list<array<string, mixed>>
      */
     public static function search(Project $Project, string $search, array $queryParams = []): array
     {
@@ -203,7 +208,7 @@ class Handler
         }
 
         try {
-            return QUI::getDataBase()->fetch($query);
+            return array_values(QUI::getDataBase()->fetch($query));
         } catch (QUI\Exception $exception) {
             QUI\System\Log::addError($exception->getMessage());
             return [];
@@ -216,7 +221,7 @@ class Handler
      * @param Project $Project
      * @param string $sector - group sector, "abc", "def", "ghi", "jkl", "mno", "pqr", "stu", "vz", "123"
      *
-     * @return array
+     * @return list<array<string, mixed>>
      */
     public static function getBySektor(Project $Project, string $sector): array
     {
@@ -271,11 +276,11 @@ class Handler
                 break;
         }
 
-        return QUI::getDataBase()->fetch([
+        return array_values(QUI::getDataBase()->fetch([
             'from' => self::table($Project),
             'order' => 'title',
             'where' => $where
-        ]);
+        ]));
     }
 
     /**
@@ -325,12 +330,12 @@ class Handler
      * if $params is empty, all groups are returned
      *
      * @param Project $Project
-     * @param array $params - array $params - query parameter
+     * @param array<string, mixed> $params - array $params - query parameter
      *                              $queryParams['where'],
      *                              $queryParams['where_or'],
      *                              $queryParams['limit']
      *                              $queryParams['order']
-     * @return array
+     * @return list<Group>
      *
      * @throws QUI\Tags\Exception
      */
@@ -351,12 +356,12 @@ class Handler
      * if $params is empty, all group ids are returned
      *
      * @param Project $Project
-     * @param array $params - query parameter
+     * @param array<string, mixed> $params - query parameter
      *                              $queryParams['where'],
      *                              $queryParams['where_or'],
      *                              $queryParams['limit']
      *                              $queryParams['order']
-     * @return array
+     * @return list<int>
      */
     public static function getGroupIds(Project $Project, array $params = []): array
     {
@@ -417,7 +422,7 @@ class Handler
      * Get complete hierarchical tag group tree from a project
      *
      * @param Project $Project
-     * @return array
+     * @return list<array<string, mixed>>
      */
     public static function getTree(Project $Project): array
     {
@@ -442,7 +447,7 @@ class Handler
      *
      * @param Project $Project
      * @param int|null $parentTagGroupId (optional) - parent id of group (branch) [default: root]
-     * @return array
+     * @return list<array<string, mixed>>
      */
     protected static function buildTree(Project $Project, ?int $parentTagGroupId = null): array
     {
@@ -501,8 +506,8 @@ class Handler
     /**
      * Sort tag groups alphabetically
      *
-     * @param array $groups
-     * @return array - alphabetically sorted array
+     * @param list<array<string, mixed>> $groups
+     * @return list<array<string, mixed>> - alphabetically sorted array
      */
     protected static function sortGroupsAlphabetically(array $groups): array
     {
@@ -518,7 +523,7 @@ class Handler
      *
      * @param Project $Project
      * @param int $groupId
-     * @return array
+     * @return list<int>
      */
     public static function getTagGroupChildrenIds(Project $Project, int $groupId): array
     {
@@ -536,14 +541,15 @@ class Handler
     /**
      * Get all children IDs from a tree node
      *
-     * @param array $node - tree node
-     * @param array $children (optional) - array that includes children ids
-     * @return array
+     * @param list<array<string, mixed>> $node - tree node
+     * @param list<int> $children (optional) - array that includes children ids
+     * @param-out list<int> $children
+     * @return list<int>
      */
     protected static function getChildrenIdsFromNode(array $node, array &$children = []): array
     {
         foreach ($node as $item) {
-            $children[] = $item['id'];
+            $children[] = (int)$item['id'];
 
             if (!empty($item['children'])) {
                 self::getChildrenIdsFromNode($item['children'], $children);
@@ -556,9 +562,9 @@ class Handler
     /**
      * Search tag group tree for a specific node and return this node
      *
-     * @param array $tree - the tree to search in
+     * @param list<array<string, mixed>> $tree - the tree to search in
      * @param int $nodeId - ID of the node to search for
-     * @return array|false
+     * @return array<string, mixed>|false
      */
     protected static function searchTree(array $tree, int $nodeId): bool | array
     {

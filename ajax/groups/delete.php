@@ -14,7 +14,7 @@ use QUI\Tags\Groups\Handler;
  *
  * @return bool - success
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_delete',
     function ($project, $groupIds) {
         try {

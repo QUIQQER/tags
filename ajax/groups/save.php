@@ -13,7 +13,7 @@
  *
  * @return array|false - tag group data on success; false on error
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_save',
     function ($project, $groupId, $data) {
         try {

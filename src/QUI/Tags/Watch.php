@@ -9,6 +9,7 @@ namespace QUI\Tags;
 use QUI;
 
 use function implode;
+use function is_array;
 use function json_decode;
 
 /**
@@ -21,8 +22,8 @@ class Watch
     /**
      *
      * @param string $call
-     * @param array $params
-     * @param array $result
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $result
      *
      * @return string
      */
@@ -36,6 +37,10 @@ class Watch
 
             case 'package_quiqqer_tags_ajax_tag_delete':
                 $tags = json_decode($params['tags'], true);
+
+                if (!is_array($tags)) {
+                    $tags = [];
+                }
 
                 return QUI::getLocale()->get('quiqqer/tags', 'watch.delete.tags', [
                     'tag' => implode(',', $tags)

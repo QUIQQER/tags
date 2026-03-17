@@ -4,9 +4,10 @@
  * This file contains package_quiqqer_tags_ajax_groups_search_getTagsByGroup
  */
 
+use QUI\Projects\Project;
 use QUI\Tags\Groups\Group;
 
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_search_getGroupsByGroup',
     function ($project, $groupId, $recursive = 1) {
         $Project = QUI::getProjectManager()->decode($project);
@@ -15,18 +16,23 @@ QUI::$Ajax->registerFunction(
         $groups = [];
 
         if (!empty($recursive)) {
-            function getGroups(Group $Group, $Project, &$groups): void
-            {
-                $subGroups = $Group->getChildrenIds();
-                $subGroupList = array_map(function ($groupId) use ($Project) {
-                    return QUI\Tags\Groups\Handler::get($Project, $groupId)->toArray();
-                }, $subGroups);
+            if (!function_exists('getGroups')) {
+                /**
+                 * @param list<array<string, mixed>> $groups
+                 */
+                function getGroups(Group $Group, Project $Project, array &$groups): void
+                {
+                    $subGroups = $Group->getChildrenIds();
+                    $subGroupList = array_map(function ($groupId) use ($Project) {
+                        return QUI\Tags\Groups\Handler::get($Project, $groupId)->toArray();
+                    }, $subGroups);
 
-                $groups = array_merge($groups, $subGroupList);
+                    $groups = array_merge($groups, $subGroupList);
 
-                foreach ($subGroups as $id) {
-                    $TagGroup = QUI\Tags\Groups\Handler::get($Project, $id);
-                    getGroups($TagGroup, $Project, $groups);
+                    foreach ($subGroups as $id) {
+                        $TagGroup = QUI\Tags\Groups\Handler::get($Project, $id);
+                        getGroups($TagGroup, $Project, $groups);
+                    }
                 }
             }
 

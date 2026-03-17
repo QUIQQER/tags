@@ -45,7 +45,13 @@ class Site
             && method_exists($Site, 'getLocation')
         ) {
             $url = $Site->getLocation();
-            $url = str_replace(QUI\Rewrite::getDefaultSuffix(), '', $url);
+            $defaultSuffix = QUI\Rewrite::getDefaultSuffix();
+
+            if (!is_string($defaultSuffix)) {
+                $defaultSuffix = '';
+            }
+
+            $url = str_replace($defaultSuffix, '', $url);
 
             QUI::getRewrite()->registerPath($url . '/*', $Site);
         }
@@ -89,7 +95,7 @@ class Site
      * Add tags to Fulltext search
      *
      * @param QUI\Interfaces\Projects\Site $Site
-     * @param array $tags
+     * @param array<string> $tags
      * @return void
      */
     public static function setTagsToFulltextSearch(QUI\Interfaces\Projects\Site $Site, array $tags): void

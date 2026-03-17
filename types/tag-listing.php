@@ -11,20 +11,21 @@
 
 $url = $_REQUEST['_url'];
 $url = pathinfo($url);
+$urlDirname = $url['dirname'] ?? '';
 
 $siteUrl = $Site->getLocation();
 
 // tag
 if (
     $siteUrl != $_REQUEST['_url']
-    && $siteUrl == $url['dirname'] . QUI\Rewrite::getDefaultSuffix()
+    && $siteUrl == $urlDirname . QUI\Rewrite::getDefaultSuffix()
 ) {
     try {
         $title = $Site->getAttribute('title');
         $Manager = new QUI\Tags\Manager($Project);
         $tag = $Manager->get($url['filename']);
 
-        if (isset($tag['image']) && !empty($tag['image'])) {
+        if (!empty($tag['image'])) {
             $Site->setAttribute('image_emotion', $tag['image']);
         }
 
