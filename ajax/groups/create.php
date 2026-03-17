@@ -13,7 +13,7 @@
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_create',
     function ($project, $title, $desc, $image) {
         $Project = QUI::getProjectManager()->decode($project);

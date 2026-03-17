@@ -15,7 +15,7 @@ use QUI\Tags\Controls\TagList;
  *
  * @return array
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_search_getTagsBySektor',
     function ($project, $sektor, $groupId = null) {
         $TagList = new TagList([

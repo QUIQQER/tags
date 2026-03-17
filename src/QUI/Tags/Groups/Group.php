@@ -81,7 +81,7 @@ class Group
     protected string $generator = '';
 
     /**
-     * @var array
+     * @var array<string, array<string, mixed>>
      */
     protected array $tags = [];
 
@@ -236,7 +236,7 @@ class Group
 
         $Image = $this->Project->getMedia()->getPlaceholderImage();
 
-        if (QUI\Projects\Media\Utils::isImage($Image)) {
+        if ($Image !== null && QUI\Projects\Media\Utils::isImage($Image)) {
             return $Image;
         }
 
@@ -245,7 +245,7 @@ class Group
 
     /**
      * @param string $search
-     * @return array
+     * @return list<array<string, mixed>>
      */
     public function searchTags(string $search): array
     {
@@ -469,7 +469,7 @@ class Group
     /**
      * Get IDs of all child tag groups
      *
-     * @return array
+     * @return list<int>
      */
     public function getChildrenIds(): array
     {
@@ -567,6 +567,13 @@ class Group
             return;
         }
 
+        if ($this->Manager === null) {
+            throw new QUI\Tags\Exception([
+                'quiqqer/tags',
+                'exception.tag.not.found'
+            ]);
+        }
+
         $tagData = $this->Manager->get($tag);
 
         if (!isset($this->tags[$tagData['tag']])) {
@@ -577,7 +584,7 @@ class Group
     /**
      * Add multiple tags to the group
      *
-     * @param array $tags - tags
+     * @param array<int, string> $tags - tags
      */
     public function addTags(array $tags): void
     {
@@ -593,7 +600,7 @@ class Group
     /**
      * Set tags to group (overwrites all previous tags!)
      *
-     * @param array $tags
+     * @param array<int, string> $tags
      * @return void
      */
     public function setTags(array $tags): void
@@ -630,21 +637,17 @@ class Group
      */
     public function removeTagsByGenerator(string $generator): void
     {
-        $tags = $this->getTags();
-
-        foreach ($tags as $tag => $tagData) {
+        foreach ($this->tags as $tag => $tagData) {
             if ($tagData['generator'] == $generator) {
-                unset($tags[$tag]);
+                unset($this->tags[$tag]);
             }
         }
-
-        $this->tags = $tags;
     }
 
     /**
      * Return the tags from the group
      *
-     * @return array
+     * @return list<array<string, mixed>>
      */
     public function getTags(): array
     {
@@ -660,7 +663,7 @@ class Group
     /**
      * Return the group as an array
      *
-     * @return array
+     * @return array<string, int|string|bool|null>
      */
     public function toArray(): array
     {
@@ -691,6 +694,6 @@ class Group
      */
     public function toJSON(): string
     {
-        return json_encode($this->toArray());
+        return json_encode($this->toArray()) ?: '';
     }
 }

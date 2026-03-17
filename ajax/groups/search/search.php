@@ -13,7 +13,7 @@
  *
  * @return string
  */
-QUI::$Ajax->registerFunction(
+QUI::getAjax()->registerFunction(
     'package_quiqqer_tags_ajax_groups_search_search',
     function (
         $project,

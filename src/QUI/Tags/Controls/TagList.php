@@ -13,6 +13,7 @@ use QUI\Tags\Groups\Handler as TagGroupsHandler;
 use function array_unique;
 use function dirname;
 use function implode;
+use function is_array;
 use function is_null;
 use function json_decode;
 
@@ -26,7 +27,7 @@ class TagList extends QUI\Control
     /**
      * constructor
      *
-     * @param array $attributes
+     * @param array<string, mixed> $attributes
      */
     public function __construct(array $attributes = [])
     {
@@ -91,7 +92,7 @@ class TagList extends QUI\Control
      * @param string $sector - tag sector, "abc", "def", "ghi", "jkl", "mno", "pqr", "stu", "vz", "123"
      * @param int|null $groupId (optional) - limit results to a specific tag group
      *
-     * @return array
+     * @return list<array<string, mixed>>
      * @throws Exception
      */
     public function getList(string $sector, null | int $groupId = null): array
@@ -169,11 +170,11 @@ class TagList extends QUI\Control
             }
         }
 
-        return QUI::getDataBase()->fetch([
+        return array_values(QUI::getDataBase()->fetch([
             'from' => QUI::getDBProjectTableName('tags', $this->getProject()),
             'order' => 'title',
             'where' => $where
-        ]);
+        ]));
     }
 
     /**
@@ -212,6 +213,14 @@ class TagList extends QUI\Control
             ],
             'limit' => 1
         ]);
+
+        if (
+            !isset($result[0])
+            || !is_array($result[0])
+            || !isset($result[0]['id'])
+        ) {
+            throw new Exception('No tag listing site found');
+        }
 
         return $this->getProject()->get($result[0]['id']);
     }
