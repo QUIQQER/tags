@@ -115,12 +115,9 @@ if (!empty($requestTags)) {
         $sqlParams['limit'] = 10;
     }
 
-    $limit = (int)$sqlParams['limit'];
-    $start = isset($sqlParams['start']) ? (int)$sqlParams['start'] : 0;
-
     $count = $Manager->getSiteCountFromTags($tags);
     $result = $Manager->getSitesFromTags($tags, [
-        'limit' => $start . ',' . $limit
+        'limit' => $sqlParams['limit']
     ]);
 }
 
