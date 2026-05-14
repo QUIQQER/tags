@@ -226,7 +226,15 @@
             <de><![CDATA[Tag-Verwaltung]]></de>
             <en><![CDATA[Tag Management]]></en>
         </locale>
+        <locale name="permission.tag._header">
+            <de><![CDATA[Tag-Verwaltung]]></de>
+            <en><![CDATA[Tag Management]]></en>
+        </locale>
         <locale name="permission.tags.siteLimit">
+            <de><![CDATA[Anzahl der Tags, die der Benutzer einer Seite hinzufügen darf.]]></de>
+            <en><![CDATA[Number of tags that can be added to a page by the user]]></en>
+        </locale>
+        <locale name="permission.tag.siteLimit">
             <de><![CDATA[Anzahl der Tags, die der Benutzer einer Seite hinzufügen darf.]]></de>
             <en><![CDATA[Number of tags that can be added to a page by the user]]></en>
         </locale>
@@ -234,7 +242,15 @@
             <de><![CDATA[Darf Tags löschen.]]></de>
             <en><![CDATA[Can delete tags.]]></en>
         </locale>
+        <locale name="permission.tag.delete">
+            <de><![CDATA[Darf Tags löschen.]]></de>
+            <en><![CDATA[Can delete tags.]]></en>
+        </locale>
         <locale name="permission.tags.create">
+            <de><![CDATA[Darf Tags erstellen und bearbeiten.]]></de>
+            <en><![CDATA[Can create and edit tags.]]></en>
+        </locale>
+        <locale name="permission.tag.create">
             <de><![CDATA[Darf Tags erstellen und bearbeiten.]]></de>
             <en><![CDATA[Can create and edit tags.]]></en>
         </locale>
@@ -242,11 +258,23 @@
             <de><![CDATA[Tag Gruppen]]></de>
             <en><![CDATA[Tag groups]]></en>
         </locale>
+        <locale name="permission.tag.group._header">
+            <de><![CDATA[Tag Gruppen]]></de>
+            <en><![CDATA[Tag groups]]></en>
+        </locale>
         <locale name="permission.tags.group.create">
             <de><![CDATA[Darf Tags Gruppen erstellen.]]></de>
             <en><![CDATA[Can create tag groups.]]></en>
         </locale>
+        <locale name="permission.tag.group.create">
+            <de><![CDATA[Darf Tags Gruppen erstellen.]]></de>
+            <en><![CDATA[Can create tag groups.]]></en>
+        </locale>
         <locale name="permission.tags.group.delete">
+            <de><![CDATA[Darf Tag Gruppen löschen.]]></de>
+            <en><![CDATA[Can delete tag groups.]]></en>
+        </locale>
+        <locale name="permission.tag.group.delete">
             <de><![CDATA[Darf Tag Gruppen löschen.]]></de>
             <en><![CDATA[Can delete tag groups.]]></en>
         </locale>
