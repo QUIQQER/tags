@@ -31,12 +31,13 @@ define('package/quiqqer/tags/bin/groups/Panel', [
     'Mustache',
     'Projects',
     'package/quiqqer/tags/bin/groups/Group',
+    'package/quiqqer/tags/bin/utils/Window',
 
     'text!package/quiqqer/tags/bin/groups/Panel.createGroup.html',
     'css!package/quiqqer/tags/bin/groups/Panel.css'
 
 ], function (QUI, QUIPanel, QUIButton, QUIConfirm, Grid, ProjectSelect,
-             QUILocale, QUIAjax, Mustache, Projects, Group, templateCreateGroup) {
+             QUILocale, QUIAjax, Mustache, Projects, Group, WindowUtils, templateCreateGroup) {
     "use strict";
 
     var lg = 'quiqqer/tags';
@@ -75,6 +76,8 @@ define('package/quiqqer/tags/bin/groups/Panel', [
 
             this.$Projects = new ProjectSelect({
                 emptyselect: false,
+                project    : Projects.getName(),
+                lang       : Projects.getLang(),
                 events     : {
                     onChange: function (value) {
                         this.$setValue(value);
@@ -103,11 +106,31 @@ define('package/quiqqer/tags/bin/groups/Panel', [
          */
         $setValue: function (selectValue) {
             if (!selectValue) {
+                this.$Project = null;
+            } else {
+                var values    = selectValue.split(',');
+                this.$Project = Projects.get(values[0], values[1]);
+            }
+
+            this.$toggleAddButton();
+        },
+
+        /**
+         * Enable / disable the "add" button depending on whether a
+         * project is selected. Safe to call before the button exists.
+         */
+        $toggleAddButton: function () {
+            var AddButton = this.getButtons('add');
+
+            if (!AddButton) {
                 return;
             }
 
-            var values    = selectValue.split(',');
-            this.$Project = Projects.get(values[0], values[1]);
+            if (this.$Project) {
+                AddButton.enable();
+            } else {
+                AddButton.disable();
+            }
         },
 
         /**
@@ -146,6 +169,7 @@ define('package/quiqqer/tags/bin/groups/Panel', [
                 name     : 'add',
                 text     : QUILocale.get('quiqqer/core', 'add'),
                 textimage: 'fa fa-plus',
+                disabled : true,
                 events   : {
                     onClick: this.openCreateGroupDialog
                 }
@@ -179,6 +203,10 @@ define('package/quiqqer/tags/bin/groups/Panel', [
                     onClick: self.$openDeleteDialog
                 }
             });
+
+            // the project select's onLoad may have fired before the
+            // buttons existed, so sync the add button state now
+            this.$toggleAddButton();
         },
 
         /**
@@ -320,11 +348,15 @@ define('package/quiqqer/tags/bin/groups/Panel', [
         openCreateGroupDialog: function () {
             var self = this;
 
+            if (!self.$Project) {
+                return;
+            }
+
             new QUIConfirm({
                 title    : QUILocale.get(lg, 'tag.groups.window.create.title'),
                 icon     : 'fa fa-tags',
                 maxWidth : 450,
-                maxHeight: 325,
+                maxHeight: 410,
                 autoclose: false,
                 events   : {
                     onOpen: function (Win) {
@@ -335,12 +367,30 @@ define('package/quiqqer/tags/bin/groups/Panel', [
                         Content.set('html', Mustache.render(templateCreateGroup, {
                             title      : QUILocale.get('quiqqer/core', 'title'),
                             image      : QUILocale.get('quiqqer/core', 'image'),
-                            description: QUILocale.get('quiqqer/core', 'description')
+                            description: QUILocale.get('quiqqer/core', 'description'),
+                            titleError : QUILocale.get(lg, 'panel.add.window.error.title.empty'),
+                            keepOpen   : QUILocale.get(lg, 'panel.add.window.keepOpen.group')
                         }));
+
+                        var Title = Content.getElement('[name="title"]'),
+                            Img   = Content.getElement('[name="image"]'),
+                            Desc  = Content.getElement('[name="desc"]');
+
+                        WindowUtils.bindSubmitShortcuts(Win, [Title, Img], Desc);
+                        WindowUtils.injectShortcutHint(Content);
+
+                        Title.addEventListener('input', function () {
+                            if (Title.value.trim() !== '') {
+                                WindowUtils.hideFieldError(
+                                    Content.querySelector('[data-name="title-error"]'),
+                                    Title
+                                );
+                            }
+                        });
 
                         QUI.parse(Content).then(function () {
 
-                            Content.getElement('[name="title"]').focus();
+                            Title.focus();
 
                             return new Promise(function (resolve) {
                                 require(['utils/Controls'], function (Utils) {
@@ -353,19 +403,51 @@ define('package/quiqqer/tags/bin/groups/Panel', [
                     },
 
                     onSubmit: function (Win) {
+                        var Content    = Win.getContent(),
+                            Title      = Content.getElement('[name="title"]'),
+                            TitleError = Content.querySelector('[data-name="title-error"]');
+
+                        if (Title.value.trim() === '') {
+                            WindowUtils.showFieldError(TitleError, Title);
+                            return;
+                        }
+
+                        WindowUtils.hideFieldError(TitleError, Title);
+
                         Win.Loader.show();
 
-                        var Content = Win.getContent();
+                        var Img      = Content.getElement('[name="image"]'),
+                            Desc     = Content.getElement('[name="desc"]'),
+                            KeepOpen = Content.querySelector('[data-name="keep-open"]');
 
                         QUIAjax.post('package_quiqqer_tags_ajax_groups_create', function () {
-                            Win.close();
                             self.dataRefresh();
+
+                            if (KeepOpen && KeepOpen.checked) {
+                                Title.value = '';
+                                Desc.value  = '';
+                                Img.value   = '';
+
+                                var quiid        = Img.getParent().get('data-quiid');
+                                var ImageControl = QUI.Controls.getById(quiid);
+
+                                if (ImageControl) {
+                                    ImageControl.setValue('');
+                                }
+
+                                WindowUtils.hideFieldError(TitleError, Title);
+                                Win.Loader.hide();
+                                Title.focus();
+                                return;
+                            }
+
+                            Win.close();
                         }, {
                             'package': 'quiqqer/tags',
                             project  : self.$Project.encode(),
-                            title    : Content.getElement('[name="title"]').value,
-                            image    : Content.getElement('[name="image"]').value,
-                            desc     : Content.getElement('[name="desc"]').value
+                            title    : Title.value,
+                            image    : Img.value,
+                            desc     : Desc.value
                         });
                     }
                 }
