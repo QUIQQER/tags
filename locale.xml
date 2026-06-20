@@ -254,6 +254,10 @@
             <de><![CDATA[Tag-Verwaltung]]></de>
             <en><![CDATA[Tag Management]]></en>
         </locale>
+        <locale name="permission.tags.mcp">
+            <de><![CDATA[Darf Tags und Tag-Gruppen über den MCP-Server (KI) verwalten.]]></de>
+            <en><![CDATA[Can manage tags and tag groups via the MCP server (AI).]]></en>
+        </locale>
         <locale name="permission.tags.siteLimit">
             <de><![CDATA[Anzahl der Tags, die der Benutzer einer Seite hinzufügen darf.]]></de>
             <en><![CDATA[Number of tags that can be added to a page by the user]]></en>
