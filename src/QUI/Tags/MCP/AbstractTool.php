@@ -14,9 +14,16 @@ use QUI\Projects\Project;
 use QUI\Tags\Groups\Group;
 use QUI\Tags\Manager;
 
+use function array_unique;
+use function array_values;
+use function explode;
+use function implode;
+use function is_array;
+use function is_numeric;
 use function is_string;
 use function max;
 use function min;
+use function trim;
 
 abstract class AbstractTool implements ToolInterface
 {
@@ -68,6 +75,34 @@ abstract class AbstractTool implements ToolInterface
     protected static function parseGroup(Group $Group): array
     {
         return $Group->toArray();
+    }
+
+    /**
+     * Normalizes the stored "quiqqer.tags.tagGroups" site attribute into a list of ids.
+     *
+     * @return list<int>
+     */
+    protected static function parseTagGroupIds(mixed $value): array
+    {
+        if (is_array($value)) {
+            $value = implode(',', $value);
+        }
+
+        if (!is_string($value)) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach (explode(',', $value) as $part) {
+            $part = trim($part);
+
+            if ($part !== '' && is_numeric($part)) {
+                $ids[] = (int)$part;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     protected static function sanitizeLimit(?int $limit): int

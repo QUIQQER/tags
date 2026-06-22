@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains \QUI\Tags\MCP\Tag\SetSiteTags
+ * This file contains \QUI\Tags\MCP\Tag\GetSiteTagGroups
  */
 
 namespace QUI\Tags\MCP\Tag;
@@ -9,10 +9,11 @@ namespace QUI\Tags\MCP\Tag;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\Builder;
 use QUI\AI\MCP\ToolHelper;
+use QUI\Tags\Groups\Handler;
 use QUI\Tags\MCP\AbstractTool;
 use Throwable;
 
-class SetSiteTags extends AbstractTool
+class GetSiteTagGroups extends AbstractTool
 {
     public function register(Builder $serverBuilder): void
     {
@@ -20,39 +21,46 @@ class SetSiteTags extends AbstractTool
             function (
                 string $project,
                 int $siteId,
-                array $tags,
                 string | null $lang = null
             ): CallToolResult | array {
                 try {
                     self::checkTagsPermission();
 
-                    $Manager = self::getManager($project, $lang);
-                    $Manager->setSiteTags($siteId, $tags);
+                    $Project = self::getProject($project, $lang);
+                    $Site = $Project->get($siteId);
+
+                    $groupIds = self::parseTagGroupIds(
+                        $Site->getAttribute('quiqqer.tags.tagGroups')
+                    );
+
+                    $groups = [];
+
+                    foreach ($groupIds as $groupId) {
+                        if (Handler::exists($Project, $groupId)) {
+                            $groups[] = self::parseGroup(Handler::get($Project, $groupId));
+                        }
+                    }
 
                     return [
                         'project' => $project,
                         'siteId' => $siteId,
-                        'tags' => $Manager->getSiteTags($siteId)
+                        'groups' => $groups
                     ];
                 } catch (Throwable $Exception) {
                     return ToolHelper::parseExceptionToResult($Exception);
                 }
             },
-            name: 'quiqqer_tags_set_site_tags',
-            description: 'Overwrites the complete tag assignment of a site with the given tags.',
+            name: 'quiqqer_tags_get_site_tag_groups',
+            description: 'Returns the tag groups assigned to a site. This is independent from '
+                . 'the tags assigned to a site (see quiqqer_tags_get_site_tags).',
             inputSchema: [
                 'type' => 'object',
                 'additionalProperties' => false,
-                'required' => ['project', 'siteId', 'tags'],
+                'required' => ['project', 'siteId'],
                 'properties' => [
                     'project' => ['type' => 'string', 'description' => 'Project name.'],
                     'lang' => ['type' => 'string', 'description' => 'Project language.'],
-                    'siteId' => ['type' => 'integer', 'description' => 'Site id.'],
-                    'tags' => [
-                        'type' => 'array',
-                        'items' => ['type' => 'string'],
-                        'description' => 'List of tags to assign to the site.'
-                    ]
+                    'siteId' => ['type' => 'integer', 'description' => 'Site id.']
                 ]
             ]
         );

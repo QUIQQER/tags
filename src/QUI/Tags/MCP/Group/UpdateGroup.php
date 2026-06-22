@@ -26,8 +26,7 @@ class UpdateGroup extends AbstractTool
                 string | null $workingTitle = null,
                 string | null $description = null,
                 int | null $priority = null,
-                int | null $parentId = null,
-                array | null $tags = null
+                int | null $parentId = null
             ): CallToolResult | array {
                 try {
                     self::checkTagsPermission();
@@ -55,10 +54,6 @@ class UpdateGroup extends AbstractTool
                         $Group->setParentGroup($parentId);
                     }
 
-                    if ($tags !== null) {
-                        $Group->setTags($tags);
-                    }
-
                     $Group->save();
 
                     return self::parseGroup($Group);
@@ -67,7 +62,9 @@ class UpdateGroup extends AbstractTool
                 }
             },
             name: 'quiqqer_taggroups_update',
-            description: 'Updates an existing tag group, including its assigned tags.',
+            description: 'Updates the metadata of an existing tag group (title, description, '
+                . 'priority, parent). To change the tags of a group, use '
+                . 'quiqqer_taggroups_modify_tags.',
             inputSchema: [
                 'type' => 'object',
                 'additionalProperties' => false,
@@ -80,12 +77,7 @@ class UpdateGroup extends AbstractTool
                     'workingTitle' => ['type' => 'string', 'description' => 'Internal working title.'],
                     'description' => ['type' => 'string', 'description' => 'Description.'],
                     'priority' => ['type' => 'integer', 'description' => 'Priority.'],
-                    'parentId' => ['type' => 'integer', 'description' => 'Parent group id.'],
-                    'tags' => [
-                        'type' => 'array',
-                        'items' => ['type' => 'string'],
-                        'description' => 'Complete list of tags for the group (overwrites existing tags).'
-                    ]
+                    'parentId' => ['type' => 'integer', 'description' => 'Parent group id.']
                 ]
             ]
         );
