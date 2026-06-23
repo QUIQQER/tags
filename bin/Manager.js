@@ -23,6 +23,7 @@ define('package/quiqqer/tags/bin/Manager', [
     'controls/grid/Grid',
     'package/quiqqer/tags/bin/TagSites',
     'package/quiqqer/tags/bin/groups/Select',
+    'package/quiqqer/tags/bin/utils/Window',
     'utils/Controls',
     'Ajax',
     'Locale',
@@ -30,7 +31,7 @@ define('package/quiqqer/tags/bin/Manager', [
 
     'css!package/quiqqer/tags/bin/Manager.css'
 
-], function (QUI, QUIPanel, QUIConfirm, QUISelect, Grid, TagSites, TagGroupSelect, ControlUtils, QUIAjax, QUILocale, Projects) {
+], function (QUI, QUIPanel, QUIConfirm, QUISelect, Grid, TagSites, TagGroupSelect, WindowUtils, ControlUtils, QUIAjax, QUILocale, Projects) {
     "use strict";
 
     var lg = 'quiqqer/tags';
@@ -473,9 +474,14 @@ define('package/quiqqer/tags/bin/Manager', [
                             '<label for="field-title">' +
                             QUILocale.get(lg, 'panel.manager.tag.title') +
                             '</label>' +
-                            '<input type="text" name="title" id="field-title" />' +
+                            '<input type="text" name="title" id="field-title" ' +
+                            'data-name="title" aria-describedby="field-title-error" />' +
+                            '<span class="quiqqer-tags-windowError" data-name="title-error" ' +
+                            'id="field-title-error" role="alert" hidden>' +
+                            QUILocale.get(lg, 'panel.add.window.error.title.empty') +
+                            '</span>' +
 
-                            '<label for="field-desc">' +
+                            '<label for="field-image">' +
                             QUILocale.get(lg, 'panel.manager.image.tag') +
                             '</label>' +
                             '<input name="image" id="field-image" class="media-image" type="text" />' +
@@ -490,6 +496,30 @@ define('package/quiqqer/tags/bin/Manager', [
                             Title = Content.getElement('[name="title"]'),
                             Desc  = Content.getElement('[name="desc"]'),
                             Img   = Content.getElement('[name="image"]');
+
+                        WindowUtils.bindSubmitShortcuts(Win, [Title, Img], Desc);
+                        var ShortcutHint = WindowUtils.injectShortcutHint(Content);
+
+                        // "keep window open" only makes sense when adding tags
+                        if (typeof tag === 'undefined') {
+                            var KeepOpen = new Element('label', {
+                                'class'    : 'qui-tags-add-window-keepOpen',
+                                'data-name': 'keep-open-label',
+                                html       : '<input type="checkbox" data-name="keep-open" />' +
+                                             '<span>' + QUILocale.get(lg, 'panel.add.window.keepOpen') + '</span>'
+                            });
+
+                            Content.insertBefore(KeepOpen, ShortcutHint);
+                        }
+
+                        Title.addEventListener('input', function () {
+                            if (Title.value.trim() !== '') {
+                                WindowUtils.hideFieldError(
+                                    Content.querySelector('[data-name="title-error"]'),
+                                    Title
+                                );
+                            }
+                        });
 
                         ControlUtils.parse(Content).then(function () {
                             QUI.Controls.getControlsInElement(Content).each(function (Control) {
@@ -532,7 +562,10 @@ define('package/quiqqer/tags/bin/Manager', [
 
                                     TagGroupSelectCtrl.addTagGroups(data.tagGroupIds);
 
-                                    Win.setAttribute('maxHeight', 600);
+                                    // keep the shortcut hint at the very bottom
+                                    Content.appendChild(ShortcutHint);
+
+                                    Win.setAttribute('maxHeight', 650);
                                     Win.resize();
                                 }
 
@@ -552,6 +585,15 @@ define('package/quiqqer/tags/bin/Manager', [
                             Title   = Content.getElement('[name="title"]'),
                             Desc    = Content.getElement('[name="desc"]'),
                             Img     = Content.getElement('[name="image"]');
+
+                        var TitleError = Content.querySelector('[data-name="title-error"]');
+
+                        if (Title.value.trim() === '') {
+                            WindowUtils.showFieldError(TitleError, Title);
+                            return;
+                        }
+
+                        WindowUtils.hideFieldError(TitleError, Title);
 
                         Win.Loader.show();
 
@@ -574,6 +616,26 @@ define('package/quiqqer/tags/bin/Manager', [
                         }
 
                         P.then(function () {
+                            var KeepOpen = Content.querySelector('[data-name="keep-open"]');
+
+                            if (typeof tag === 'undefined' && KeepOpen && KeepOpen.checked) {
+                                Title.value = '';
+                                Desc.value  = '';
+                                Img.value   = '';
+
+                                var quiid        = Img.getParent().get('data-quiid');
+                                var ImageControl = QUI.Controls.getById(quiid);
+
+                                if (ImageControl) {
+                                    ImageControl.setValue('');
+                                }
+
+                                WindowUtils.hideFieldError(TitleError, Title);
+                                Win.Loader.hide();
+                                Title.focus();
+                                return;
+                            }
+
                             Win.close();
                         }).catch(function () {
                             Win.Loader.hide();

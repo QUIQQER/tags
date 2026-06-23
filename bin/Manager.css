@@ -20,3 +20,36 @@
 .qui-tags-add-window textarea {
     height : 140px;
 }
+
+/* Flat float layout overrides for the shared validation / hint blocks */
+.qui-tags-add-window .quiqqer-tags-windowError {
+    clear: both;
+    float: left;
+    margin: -5px 0 10px;
+    width: 100%;
+}
+
+.qui-tags-add-window .quiqqer-tags-windowHints {
+    float: left;
+    width: 100%;
+}
+
+.qui-tags-add-window .qui-tags-add-window-keepOpen {
+    align-items: center;
+    clear: both;
+    color: var(--qui-colors-muted, #6f6f6f);
+    cursor: pointer;
+    display: flex;
+    float: left;
+    font-size: 0.8125rem;
+    gap: 0.4rem;
+    line-height: 1.3;
+    margin: 5px 0;
+    width: 100%;
+}
+
+.qui-tags-add-window .qui-tags-add-window-keepOpen input {
+    float: none;
+    margin: 0;
+    width: auto;
+}

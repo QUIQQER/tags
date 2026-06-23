@@ -1,6 +1,5 @@
 .quiqqer-tags-groupsCreate {
     float: left;
-    height: 100%;
     width: 100%;
 }
 
@@ -37,4 +36,22 @@
 
 .quiqqer-tags-groupsCreate input {
     width: 100%;
+}
+
+.quiqqer-tags-groupsCreate-keepOpen {
+    align-items: center;
+    color: var(--qui-colors-muted, #6f6f6f);
+    cursor: pointer;
+    display: flex;
+    font-size: 0.8125rem;
+    gap: 0.4rem;
+}
+
+.quiqqer-tags-groupsCreate .quiqqer-tags-groupsCreate-keepOpen input {
+    margin: 0;
+    width: auto;
+}
+
+.quiqqer-tags-groupsCreate .quiqqer-tags-groupsCreate-keepOpen > span {
+    width: auto;
 }
