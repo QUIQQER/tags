@@ -1,0 +1,65 @@
+@CHARSET "UTF-8";
+
+/**
+ * Shared styles for the tag / tag group create & edit windows
+ * (keyboard shortcut hint and inline field validation).
+ */
+
+.quiqqer-tags-windowInput--error {
+    border-color: var(--qui-colors-danger, #c4170c);
+}
+
+.quiqqer-tags-windowError {
+    color: var(--qui-colors-danger, #c4170c);
+    display: block;
+    font-size: 0.8125rem;
+    margin-top: 4px;
+}
+
+.quiqqer-tags-windowError[hidden] {
+    display: none;
+}
+
+.quiqqer-tags-windowHints {
+    clear: both;
+    color: var(--qui-colors-muted, #6f6f6f);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 12px;
+}
+
+.quiqqer-tags-windowHint {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.4rem;
+}
+
+.quiqqer-tags-windowHintKeys {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.2rem;
+    white-space: nowrap;
+}
+
+.quiqqer-tags-windowHintKeys kbd {
+    background: var(--qui-colors-bg, #fff);
+    border: 1px solid var(--qui-colors-border, #cdcdcd);
+    border-radius: 0.35rem;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    float: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    margin: 0;
+    padding: 1px 5px;
+    width: auto;
+}
+
+.quiqqer-tags-windowHintSep {
+    color: var(--qui-colors-muted, #9a9a9a);
+}
+
+.quiqqer-tags-windowHintText {
+    font-size: 0.75rem;
+}

@@ -33,6 +33,30 @@
             <de><![CDATA[Tag hinzufügen]]></de>
             <en><![CDATA[Add a tag]]></en>
         </locale>
+        <locale name="panel.add.window.error.title.empty">
+            <de><![CDATA[Bitte gib einen Titel ein.]]></de>
+            <en><![CDATA[Please enter a title.]]></en>
+        </locale>
+        <locale name="panel.add.window.shortcuts.label">
+            <de><![CDATA[Tastenkürzel]]></de>
+            <en><![CDATA[Keyboard shortcuts]]></en>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save">
+            <de><![CDATA[Speichern]]></de>
+            <en><![CDATA[Save]]></en>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save.description">
+            <de><![CDATA[Speichern (in Beschreibung)]]></de>
+            <en><![CDATA[Save (in description)]]></en>
+        </locale>
+        <locale name="panel.add.window.keepOpen">
+            <de><![CDATA[Fenster offen lassen (mehrere Tags anlegen)]]></de>
+            <en><![CDATA[Keep window open (create several tags)]]></en>
+        </locale>
+        <locale name="panel.add.window.keepOpen.group">
+            <de><![CDATA[Fenster offen lassen (mehrere Gruppen anlegen)]]></de>
+            <en><![CDATA[Keep window open (create several groups)]]></en>
+        </locale>
         <locale name="site.window.add.tag.title" html="true">
             <de><![CDATA[<p>Das Tag <strong>[tag]</strong> existiert noch nicht. Möchtest du es aufnehmen?]]></de>
             <en><![CDATA[<p>The tag <strong>[tag]</strong> doesn't exist yet. Would you like to add it?]]></en>
@@ -229,6 +253,10 @@
         <locale name="permission.tag._header">
             <de><![CDATA[Tag-Verwaltung]]></de>
             <en><![CDATA[Tag Management]]></en>
+        </locale>
+        <locale name="permission.tags.mcp">
+            <de><![CDATA[Darf Tags und Tag-Gruppen über den MCP-Server (KI) verwalten.]]></de>
+            <en><![CDATA[Can manage tags and tag groups via the MCP server (AI).]]></en>
         </locale>
         <locale name="permission.tags.siteLimit">
             <de><![CDATA[Anzahl der Tags, die der Benutzer einer Seite hinzufügen darf.]]></de>

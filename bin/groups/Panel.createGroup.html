@@ -2,7 +2,9 @@
     <label>
         <span class="quiqqer-tags-groupsCreate-title">{{title}}</span>
         <div class="quiqqer-tags-groupsCreate-input">
-            <input type="text" name="title"/>
+            <input type="text" name="title" aria-describedby="tag-group-title-error"/>
+            <span class="quiqqer-tags-windowError" data-name="title-error"
+                  id="tag-group-title-error" role="alert" hidden>{{titleError}}</span>
         </div>
     </label>
 
@@ -18,5 +20,10 @@
         <div class="quiqqer-tags-groupsCreate-input">
             <input type="text" name="image" class="media-image"/>
         </div>
+    </label>
+
+    <label class="quiqqer-tags-groupsCreate-keepOpen" data-name="keep-open-label">
+        <input type="checkbox" data-name="keep-open"/>
+        <span>{{keepOpen}}</span>
     </label>
 </form>
