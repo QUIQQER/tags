@@ -640,31 +640,27 @@ class Manager
             return [];
         }
 
-        $str = '';
-
-        for ($i = 0, $len = count($tags); $i < $len; $i++) {
-            $str .= ' tag = "' . $this->clearTagName($tags[$i]) . '"';
-
-            if ($i != $len - 1) {
-                $str .= ' OR ';
-            }
-        }
-
-        $DataBase = QUI::getDataBase();
+        $tagNames = array_values(array_unique(array_map(self::clearTagName(...), $tags)));
 
         try {
-            $result = $DataBase->fetch([
-                'from' => QUI::getDBProjectTableName('tags_siteCache', $this->Project),
-                'where' => $str
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $result = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(
+                    Doctrine::quoteIdentifier('tag'),
+                    Doctrine::quoteIdentifier('sites')
+                )
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_cache', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('tag') . ' IN (:tags)')
+                ->setParameter('tags', $tagNames, ArrayParameterType::STRING)
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];
         }
 
         if (!isset($result[0])) {
-            return array_values($tags);
+            return $tagNames;
         }
 
         $ids = [];
@@ -704,15 +700,17 @@ class Manager
         }
 
 
-        $ids = implode(',', $ids);
-        $ids = trim($ids, ',');
+        $ids = array_map('intval', $ids);
 
         try {
-            $result = $DataBase->fetch([
-                'from' => QUI::getDBProjectTableName('tags_sites', $this->Project),
-                'where' => 'id in (' . $ids . ')'
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $result = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('tags'))
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_sites', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('id') . ' IN (:siteIds)')
+                ->setParameter('siteIds', $ids, ArrayParameterType::INTEGER)
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];

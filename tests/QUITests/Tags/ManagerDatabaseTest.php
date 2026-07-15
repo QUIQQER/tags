@@ -21,6 +21,7 @@ class ManagerDatabaseTest extends TestCase
     private Manager $Manager;
     private string $tagsTable;
     private string $cacheTable;
+    private string $sitesTable;
 
     protected function setUp(): void
     {
@@ -37,14 +38,29 @@ class ManagerDatabaseTest extends TestCase
         $this->Project->method('getLang')->willReturn('en');
         $this->tagsTable = QUI::getDBProjectTableName('tags', $this->Project);
         $this->cacheTable = QUI::getDBProjectTableName('tags_cache', $this->Project);
+        $this->sitesTable = QUI::getDBProjectTableName('tags_sites', $this->Project);
         $this->createTables();
         $this->insertTag('AlphaTag', 'Alpha', null);
         $this->insertTag('BetaTag', 'Beta', 'phpunit-generator');
         $this->insertTag('GammaTag', 'Gamma', null);
         $this->connection->insert($this->cacheTable, [
-            'tag' => 'BetaTag',
+            'tag' => 'Alphatag',
             'sites' => ',10,11,',
             'count' => 2
+        ]);
+        $this->connection->insert($this->cacheTable, [
+            'tag' => 'Betatag',
+            'sites' => ',11,12,',
+            'count' => 2
+        ]);
+        $this->connection->insert($this->cacheTable, [
+            'tag' => 'BetaTag',
+            'sites' => ',11,12,',
+            'count' => 2
+        ]);
+        $this->connection->insert($this->sitesTable, [
+            'id' => 11,
+            'tags' => ',Alphatag,Betatag,Gammatag,'
         ]);
         $this->Manager = new Manager($this->Project);
 
@@ -97,6 +113,14 @@ class ManagerDatabaseTest extends TestCase
         self::assertSame(2, (int)$result[1]['count']);
     }
 
+    public function testFindsRelationTagsThroughTagCacheSites(): void
+    {
+        self::assertSame(
+            ['AlphaTag', 'Alphatag', 'BetaTag', 'Betatag', 'Gammatag'],
+            $this->Manager->getRelationTags(['AlphaTag', 'BetaTag'])
+        );
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
@@ -114,6 +138,10 @@ class ManagerDatabaseTest extends TestCase
         $Cache->addColumn('sites', 'text', ['notnull' => false]);
         $Cache->addColumn('count', 'integer');
         $Cache->setPrimaryKey(['tag']);
+        $Sites = $Schema->createTable($this->sitesTable);
+        $Sites->addColumn('id', 'integer');
+        $Sites->addColumn('tags', 'text', ['notnull' => false]);
+        $Sites->setPrimaryKey(['id']);
 
         foreach ($Schema->toSql($this->connection->getDatabasePlatform()) as $statement) {
             $this->connection->executeStatement($statement);
