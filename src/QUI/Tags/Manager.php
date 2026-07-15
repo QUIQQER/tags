@@ -2,18 +2,18 @@
 
 namespace QUI\Tags;
 
+use Doctrine\DBAL\ArrayParameterType;
 use PDO;
-use PDOException;
 use QUI;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
 use QUI\Projects\Site\Edit;
 use QUI\Tags\Groups\Handler as TagGroupsHandler;
+use QUI\Utils\Doctrine;
 use QUI\Utils\Grid;
 use QUI\Utils\Security\Orthos;
 
 use function array_diff;
-use function array_merge;
 use function array_search;
 use function array_slice;
 use function array_unique;
@@ -29,6 +29,7 @@ use function md5;
 use function preg_replace;
 use function sort;
 use function str_replace;
+use function strtoupper;
 use function substr;
 use function trim;
 use function ucwords;
@@ -133,8 +134,8 @@ class Manager
         }
 
         try {
-            QUI::getDataBase()->insert(
-                QUI::getDBProjectTableName('tags', $this->Project),
+            QUI::getDataBaseConnection()->insert(
+                Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)),
                 [
                     'tag' => $tag,
                     'title' => $title
@@ -183,21 +184,17 @@ class Manager
     public function count(): int
     {
         try {
-            $result = QUI::getDataBase()->fetch([
-                'count' => [
-                    'select' => 'tag',
-                    'as' => 'count'
-                ],
-                'from' => QUI::getDBProjectTableName('tags', $this->Project)
-            ]);
-        } catch (QUI\Exception $Exception) {
+            return (int)QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select('COUNT(' . Doctrine::quoteIdentifier('tag') . ')')
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+                ->executeQuery()
+                ->fetchOne();
+        } catch (\Exception $Exception) {
             QUI\System\Log::writeDebugException($Exception);
             QUI\System\Log::addError($Exception->getMessage());
 
             return 0;
         }
-
-        return (int)$result[0]['count'];
     }
 
     /**
@@ -219,14 +216,16 @@ class Manager
         }
 
         // Delete tag from all tag groups
-        $Statement = QUI::getPDO()->prepare(
-            "UPDATE `" . QUI::getDBProjectTableName('tags_groups', $this->Project) . "`
-             SET `tags` = replace(`tags`, '," . $tag . ",', ',')"
-        );
-
         try {
-            $Statement->execute();
-        } catch (PDOException $Exception) {
+            $Connection = QUI::getDataBaseConnection();
+            $tags = Doctrine::quoteIdentifier('tags');
+            $Connection->createQueryBuilder()
+                ->update(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_groups', $this->Project)))
+                ->set($tags, 'REPLACE(' . $tags . ', :tag, :replacement)')
+                ->setParameter('tag', ',' . $tag . ',')
+                ->setParameter('replacement', ',')
+                ->executeStatement();
+        } catch (\Exception $Exception) {
             QUI\System\Log::writeException($Exception);
 
             throw new QUI\Database\Exception(
@@ -236,8 +235,8 @@ class Manager
         }
 
         // Delete tag itself
-        QUI::getDataBase()->delete(
-            QUI::getDBProjectTableName('tags', $this->Project),
+        QUI::getDataBaseConnection()->delete(
+            Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)),
             ['tag' => $tag]
         );
 
@@ -289,12 +288,14 @@ class Manager
             $tagParams['generator'] = $params['generator'];
         }
 
-        $result = QUI::getDataBase()->fetch([
-            'from' => QUI::getDBProjectTableName('tags', $this->Project),
-            'where' => [
-                'title' => $tagParams['title']
-            ]
-        ]);
+        $table = Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project));
+        $result = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select(Doctrine::quoteIdentifier('tag'))
+            ->from($table)
+            ->where(Doctrine::quoteIdentifier('title') . ' = :title')
+            ->setParameter('title', $tagParams['title'])
+            ->executeQuery()
+            ->fetchAllAssociative();
 
         foreach ($result as $tagEntry) {
             if ($tagEntry['tag'] != $tag) {
@@ -308,8 +309,8 @@ class Manager
             }
         }
 
-        QUI::getDataBase()->update(
-            QUI::getDBProjectTableName('tags', $this->Project),
+        QUI::getDataBaseConnection()->update(
+            $table,
             $tagParams,
             ['tag' => $tag]
         );
@@ -368,24 +369,26 @@ class Manager
         }
 
         try {
-            $result = QUI::getDataBase()->fetch([
-                'select' => 'tag',
-                'from' => QUI::getDBProjectTableName('tags', $this->Project),
-                'where' => [
-                    'tag' => $tag
-                ],
-                'limit' => 1
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $exists = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('tag'))
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+                ->setParameter('tag', $tag)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchOne() !== false;
+        } catch (\Exception $Exception) {
             QUI\System\Log::addWarning($Exception->getMessage());
             QUI\System\Log::writeDebugException($Exception);
 
             return false;
         }
 
-        $this->exists[$tag] = true;
+        if ($exists) {
+            $this->exists[$tag] = true;
+        }
 
-        return isset($result[0]);
+        return $exists;
     }
 
     /**
@@ -397,23 +400,20 @@ class Manager
     public function existsTagTitle(string $title): bool
     {
         try {
-            $result = QUI::getDataBase()->fetch([
-                'select' => 'tag',
-                'from' => QUI::getDBProjectTableName('tags', $this->Project),
-                'where' => [
-                    'title' => $title
-                ],
-                'limit' => 1
-            ]);
-        } catch (QUI\Exception $Exception) {
+            return QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('tag'))
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('title') . ' = :title')
+                ->setParameter('title', $title)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchOne() !== false;
+        } catch (\Exception $Exception) {
             QUI\System\Log::addWarning($Exception->getMessage());
             QUI\System\Log::writeDebugException($Exception);
 
             return false;
         }
-
-
-        return isset($result[0]);
     }
 
     /**
@@ -440,14 +440,15 @@ class Manager
         }
 
         try {
-            $result = QUI::getDataBase()->fetch([
-                'from' => QUI::getDBProjectTableName('tags', $this->Project),
-                'where' => [
-                    'tag' => $tag
-                ],
-                'limit' => 1
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $tagData = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select('*')
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+                ->setParameter('tag', $tag)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addWarning($Exception->getMessage());
             QUI\System\Log::writeDebugException($Exception);
 
@@ -457,17 +458,17 @@ class Manager
             );
         }
 
-        if (!isset($result[0])) {
+        if ($tagData === false) {
             throw new QUI\Tags\Exception(
                 ['quiqqer/tags', 'exception.tag.not.found'],
                 404
             );
         }
 
-        $this->tags[$tag] = $result[0];
-        QUI\Cache\Manager::set($cache, $result[0]);
+        $this->tags[$tag] = $tagData;
+        QUI\Cache\Manager::set($cache, $tagData);
 
-        return $result[0];
+        return $tagData;
     }
 
     /**
@@ -479,15 +480,16 @@ class Manager
      */
     public function getByTitle(string $title): array
     {
-        $result = QUI::getDataBase()->fetch([
-            'from' => QUI::getDBProjectTableName('tags', $this->Project),
-            'where' => [
-                'title' => $title
-            ],
-            'limit' => 1
-        ]);
+        $tagData = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+            ->where(Doctrine::quoteIdentifier('title') . ' = :title')
+            ->setParameter('title', $title)
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
 
-        if (!isset($result[0])) {
+        if ($tagData === false) {
             throw new QUI\Tags\Exception(
                 [
                     'quiqqer/tags',
@@ -496,8 +498,6 @@ class Manager
                 404
             );
         }
-
-        $tagData = $result[0];
 
         if (isset($this->tags[$tagData['tag']])) {
             return $this->tags[$tagData['tag']];
@@ -517,15 +517,16 @@ class Manager
      */
     public function getByGenerator(string $generator): array
     {
-        $result = QUI::getDataBase()->fetch([
-            'from' => QUI::getDBProjectTableName('tags', $this->Project),
-            'where' => [
-                'generator' => $generator
-            ],
-            'limit' => 1
-        ]);
+        $tagData = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+            ->where(Doctrine::quoteIdentifier('generator') . ' = :generator')
+            ->setParameter('generator', $generator)
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
 
-        if (!isset($result[0])) {
+        if ($tagData === false) {
             throw new QUI\Tags\Exception(
                 [
                     'quiqqer/tags',
@@ -534,8 +535,6 @@ class Manager
                 404
             );
         }
-
-        $tagData = $result[0];
 
         if (isset($this->tags[$tagData['tag']])) {
             return $this->tags[$tagData['tag']];
@@ -557,24 +556,25 @@ class Manager
     public function getList(array $params = []): array
     {
         $Grid = new Grid();
-        $order = 'tag ASC';
+        $gridParams = $Grid->parseDBParams($params);
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)));
+        $sortOn = $params['sortOn'] ?? 'tag';
+        $allowedSortColumns = ['tag', 'title', 'url', 'generated', 'generator'];
 
-        if (!empty($params['sortOn'])) {
-            $order = '`' . $params['sortOn'] . '`';
-
-            if (!empty($params['sortBy'])) {
-                $order .= ' ' . $params['sortBy'];
-            }
+        if (!is_string($sortOn) || !in_array($sortOn, $allowedSortColumns, true)) {
+            $sortOn = 'tag';
         }
 
-        $params = array_merge($Grid->parseDBParams($params), [
-            'from' => QUI::getDBProjectTableName('tags', $this->Project),
-            'order' => $order
-        ]);
+        $sortBy = strtoupper((string)($params['sortBy'] ?? 'ASC'));
+        $sortBy = $sortBy === 'DESC' ? 'DESC' : 'ASC';
+        $QueryBuilder->orderBy(Doctrine::quoteIdentifier($sortOn), $sortBy);
+        Doctrine::applyLimit($QueryBuilder, $gridParams['limit'] ?? null);
 
         try {
-            $result = QUI::getDataBase()->fetch($params);
-        } catch (QUI\Exception $Exception) {
+            $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];
@@ -593,20 +593,17 @@ class Manager
 
         // get count
         try {
-            $countResult = QUI::getDataBase()->fetch([
-                'select' => [
-                    'tag',
-                    'count'
-                ],
-                'from' => QUI::getDBProjectTableName('tags_cache', $this->Project),
-                'where' => [
-                    'tag' => [
-                        'type' => 'IN',
-                        'value' => $tags
-                    ]
-                ]
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $countResult = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(
+                    Doctrine::quoteIdentifier('tag'),
+                    Doctrine::quoteIdentifier('count')
+                )
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_cache', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('tag') . ' IN (:tags)')
+                ->setParameter('tags', $tags, ArrayParameterType::STRING)
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];
