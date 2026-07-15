@@ -11,6 +11,8 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use QUI;
+use QUI\Interfaces\Users\User;
+use QUI\Permissions\Permission;
 use QUI\Projects\Project;
 use QUI\Projects\Site;
 use QUI\Projects\Site\Edit;
@@ -20,12 +22,14 @@ use ReflectionProperty;
 class ManagerDatabaseTest extends TestCase
 {
     private Connection $originalConnection;
+    private ?User $originalPermissionUser;
     private Connection $connection;
     private Project $Project;
     private ManagerDatabaseTestManager $Manager;
     private string $tagsTable;
     private string $cacheTable;
     private string $sitesTable;
+    private string $siteCacheTable;
     private string $groupsTable;
 
     /**
@@ -38,6 +42,9 @@ class ManagerDatabaseTest extends TestCase
         parent::setUp();
 
         $this->originalConnection = QUI::getDataBaseConnection();
+        $PermissionUser = new ReflectionProperty(Permission::class, 'User');
+        $this->originalPermissionUser = $PermissionUser->getValue();
+        Permission::setUser(QUI::getUsers()->getSystemUser());
         $this->connection = DriverManager::getConnection([
             'driver' => 'pdo_sqlite',
             'memory' => true
@@ -52,6 +59,7 @@ class ManagerDatabaseTest extends TestCase
         $this->tagsTable = QUI::getDBProjectTableName('tags', $this->Project);
         $this->cacheTable = QUI::getDBProjectTableName('tags_cache', $this->Project);
         $this->sitesTable = QUI::getDBProjectTableName('tags_sites', $this->Project);
+        $this->siteCacheTable = QUI::getDBProjectTableName('tags_siteCache', $this->Project);
         $this->groupsTable = QUI::getDBProjectTableName('tags_groups', $this->Project);
         $this->createTables();
         $this->insertTag('AlphaTag', 'Alpha', null);
@@ -111,6 +119,8 @@ class ManagerDatabaseTest extends TestCase
         }
 
         $this->setConnection($this->originalConnection);
+        $PermissionUser = new ReflectionProperty(Permission::class, 'User');
+        $PermissionUser->setValue(null, $this->originalPermissionUser);
 
         parent::tearDown();
     }
@@ -258,6 +268,59 @@ class ManagerDatabaseTest extends TestCase
         self::assertArrayNotHasKey(20, $this->Manager->getSiteIdsFromTags(['BetaTag']));
     }
 
+    public function testCreatesSearchesAssignsAndDeletesTag(): void
+    {
+        $this->Sites[20] = $this->createSite(20);
+        $tag = $this->Manager->add('PHPUnit lifecycle tag', [
+            'title' => 'PHPUnit lifecycle tag',
+            'desc' => '<strong>PHPUnit description</strong>',
+            'url' => '/phpunit-tag',
+            'generated' => true,
+            'generator' => 'phpunit-lifecycle'
+        ]);
+
+        self::assertSame('PhpunitLifecycleTag', $tag);
+        self::assertSame([$tag], array_column($this->Manager->searchTags('lifecycle'), 'tag'));
+
+        $this->Manager->edit($tag, [
+            'title' => 'PHPUnit lifecycle tag edited',
+            'generated' => false
+        ]);
+        $tagData = (new Manager($this->Project))->get($tag);
+
+        self::assertSame('PHPUnit lifecycle tag edited', $tagData['title']);
+        self::assertSame(0, (int)$tagData['generated']);
+
+        $this->Manager->setSiteTags(20, [$tag, 'AlphaTag']);
+        $this->connection->insert($this->siteCacheTable, [
+            'id' => 20,
+            'tags' => ',' . $tag . ',AlphaTag,'
+        ]);
+        $this->connection->update(
+            $this->groupsTable,
+            ['tags' => ',AlphaTag,' . $tag . ','],
+            ['id' => 1]
+        );
+
+        self::assertSame([$tag, 'AlphaTag'], $this->Manager->getSiteTags(20));
+        self::assertArrayHasKey(20, $this->Manager->getSiteIdsFromTags([$tag]));
+
+        $this->Manager->deleteTag($tag);
+
+        self::assertFalse($this->Manager->existsTag($tag));
+        self::assertNotContains($tag, $this->Manager->getSiteTags(20));
+        self::assertArrayNotHasKey(20, $this->Manager->getSiteIdsFromTags([$tag]));
+        self::assertSame([], $this->Manager->searchTags('lifecycle'));
+        self::assertSame(
+            ',AlphaTag,',
+            $this->getStoredTags($this->groupsTable, 1)
+        );
+        self::assertSame(
+            ',AlphaTag,',
+            $this->getStoredTags($this->siteCacheTable, 20)
+        );
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
@@ -279,6 +342,10 @@ class ManagerDatabaseTest extends TestCase
         $Sites->addColumn('id', 'integer');
         $Sites->addColumn('tags', 'text', ['notnull' => false]);
         $Sites->setPrimaryKey(['id']);
+        $SiteCache = $Schema->createTable($this->siteCacheTable);
+        $SiteCache->addColumn('id', 'integer');
+        $SiteCache->addColumn('tags', 'text', ['notnull' => false]);
+        $SiteCache->setPrimaryKey(['id']);
         $Groups = $Schema->createTable($this->groupsTable);
         $Groups->addColumn('id', 'integer');
         $Groups->addColumn('title', 'string');
@@ -315,6 +382,17 @@ class ManagerDatabaseTest extends TestCase
         $Site->method('getId')->willReturn($siteId);
 
         return $Site;
+    }
+
+    private function getStoredTags(string $table, int $id): string|false
+    {
+        return $this->connection->createQueryBuilder()
+            ->select('tags')
+            ->from($table)
+            ->where('id = :id')
+            ->setParameter('id', $id)
+            ->executeQuery()
+            ->fetchOne();
     }
 
     private function resetManagerCaches(): void

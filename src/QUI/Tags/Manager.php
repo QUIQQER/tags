@@ -3,6 +3,7 @@
 namespace QUI\Tags;
 
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\Connection;
 use QUI;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
@@ -210,22 +211,49 @@ class Manager
     {
         Permission::checkPermission('tags.delete');
 
-        $tag = $this->clearTagName($tag);
-
         if (!$this->existsTag($tag)) {
-            return;
+            $tag = $this->clearTagName($tag);
+
+            if (!$this->existsTag($tag)) {
+                return;
+            }
         }
 
-        // Delete tag from all tag groups
+        $affectedSiteIds = [];
+
         try {
             $Connection = QUI::getDataBaseConnection();
-            $tags = Doctrine::quoteIdentifier('tags');
-            $Connection->createQueryBuilder()
-                ->update(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_groups', $this->Project)))
-                ->set($tags, 'REPLACE(' . $tags . ', :tag, :replacement)')
-                ->setParameter('tag', ',' . $tag . ',')
-                ->setParameter('replacement', ',')
-                ->executeStatement();
+            $affectedSiteIds = $Connection->transactional(function (Connection $Connection) use ($tag): array {
+                $siteIds = $this->removeTagFromDelimitedList(
+                    $Connection,
+                    QUI::getDBProjectTableName('tags_sites', $this->Project),
+                    $tag,
+                    ',,'
+                );
+                $siteCacheIds = $this->removeTagFromDelimitedList(
+                    $Connection,
+                    QUI::getDBProjectTableName('tags_siteCache', $this->Project),
+                    $tag,
+                    ',,'
+                );
+                $this->removeTagFromDelimitedList(
+                    $Connection,
+                    QUI::getDBProjectTableName('tags_groups', $this->Project),
+                    $tag,
+                    ','
+                );
+
+                $Connection->delete(
+                    Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_cache', $this->Project)),
+                    ['tag' => $tag]
+                );
+                $Connection->delete(
+                    Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)),
+                    ['tag' => $tag]
+                );
+
+                return array_values(array_unique([...$siteIds, ...$siteCacheIds]));
+            });
         } catch (\Exception $Exception) {
             QUI\System\Log::writeException($Exception);
 
@@ -235,14 +263,56 @@ class Manager
             );
         }
 
-        // Delete tag itself
-        QUI::getDataBaseConnection()->delete(
-            Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)),
-            ['tag' => $tag]
-        );
+        unset($this->tags[$tag], $this->exists[$tag]);
 
+        foreach ($affectedSiteIds as $siteId) {
+            unset(self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . $siteId]);
+        }
+
+        $this->clearSiteIdsFromTagsRequestCache();
         QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
-        // @todo also delete tag from cache and tag group cache tables?
+    }
+
+    /**
+     * Remove a tag from comma-separated tag lists stored in a table.
+     *
+     * @return list<int>
+     */
+    protected function removeTagFromDelimitedList(
+        Connection $Connection,
+        string $table,
+        string $tag,
+        string $emptyValue
+    ): array {
+        $rows = $Connection->createQueryBuilder()
+            ->select(
+                Doctrine::quoteIdentifier('id'),
+                Doctrine::quoteIdentifier('tags')
+            )
+            ->from(Doctrine::quoteIdentifier($table))
+            ->where(Doctrine::quoteIdentifier('tags') . ' LIKE :tag')
+            ->setParameter('tag', '%' . $tag . '%')
+            ->executeQuery()
+            ->fetchAllAssociative();
+        $affectedIds = [];
+
+        foreach ($rows as $row) {
+            $tags = array_values(array_filter(explode(',', (string)($row['tags'] ?? ''))));
+
+            if (!in_array($tag, $tags, true)) {
+                continue;
+            }
+
+            $tags = array_values(array_diff($tags, [$tag]));
+            $Connection->update(
+                Doctrine::quoteIdentifier($table),
+                ['tags' => empty($tags) ? $emptyValue : ',' . implode(',', $tags) . ','],
+                ['id' => $row['id']]
+            );
+            $affectedIds[] = (int)$row['id'];
+        }
+
+        return $affectedIds;
     }
 
     /**
