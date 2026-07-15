@@ -10,6 +10,7 @@ use Exception;
 use QUI;
 use QUI\Projects\Media\Image;
 use QUI\Projects\Project;
+use QUI\Utils\Doctrine;
 use QUI\Utils\Security\Orthos;
 
 use function array_map;
@@ -107,14 +108,15 @@ class Group
     public function __construct(int $groupId, Project $Project)
     {
         try {
-            $result = QUI::getDataBase()->fetch([
-                'from' => Handler::table($Project),
-                'where' => [
-                    'id' => $groupId
-                ],
-                'limit' => 1
-            ]);
-        } catch (QUI\Exception $exception) {
+            $data = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select('*')
+                ->from(Doctrine::quoteIdentifier(Handler::table($Project)))
+                ->where(Doctrine::quoteIdentifier('id') . ' = :groupId')
+                ->setParameter('groupId', $groupId)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchAssociative();
+        } catch (\Exception $exception) {
             QUI\System\Log::addError($exception->getMessage());
 
             throw new QUI\Tags\Exception([
@@ -123,7 +125,7 @@ class Group
             ]);
         }
 
-        if (empty($result)) {
+        if ($data === false) {
             throw new QUI\Tags\Exception([
                 'quiqqer/tags',
                 'exception.group.not.found'
@@ -133,8 +135,6 @@ class Group
         $this->Project = $Project;
         $this->id = $groupId;
         $this->Manager = new QUI\Tags\Manager($this->Project);
-
-        $data = $result[0];
 
         $this->setTitle($data['title']);
         $this->setWorkingTitle($data['workingtitle']);
@@ -453,8 +453,8 @@ class Group
             ]);
         }
 
-        QUI::getDataBase()->update(
-            Handler::table($this->Project),
+        QUI::getDataBaseConnection()->update(
+            Doctrine::quoteIdentifier(Handler::table($this->Project)),
             [
                 'parentId' => $groupId
             ],
@@ -489,8 +489,8 @@ class Group
         }
 
         try {
-            QUI::getDataBase()->update(
-                Handler::table($this->Project),
+            QUI::getDataBaseConnection()->update(
+                Doctrine::quoteIdentifier(Handler::table($this->Project)),
                 ['parentId' => null],
                 ['id' => $this->id]
             );
@@ -537,8 +537,8 @@ class Group
         $tags = array_values(array_unique($tags));
 
         // database
-        QUI::getDataBase()->update(
-            Handler::table($this->Project),
+        QUI::getDataBaseConnection()->update(
+            Doctrine::quoteIdentifier(Handler::table($this->Project)),
             [
                 'title' => $this->getTitle(),
                 'workingtitle' => $this->getWorkingTitle(),

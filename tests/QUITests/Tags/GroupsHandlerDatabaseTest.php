@@ -10,6 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
+use QUI\Tags\Groups\Group;
 use QUI\Tags\Groups\Handler;
 use ReflectionProperty;
 
@@ -42,6 +43,7 @@ class GroupsHandlerDatabaseTest extends TestCase
         $this->insertGroup(4, '123 Numbers', ',number,', null);
         $this->insertGroup(5, '! Special', ',special,', null);
         $this->insertGroup(6, 'Zebra child', ',animal,', 3);
+        $this->insertGroup(7, 'Lifecycle child', '', 3);
         $this->resetHandlerCaches();
     }
 
@@ -55,7 +57,7 @@ class GroupsHandlerDatabaseTest extends TestCase
 
     public function testCountsSearchesAndPaginatesGroups(): void
     {
-        self::assertSame(6, Handler::count($this->Project));
+        self::assertSame(7, Handler::count($this->Project));
 
         $result = Handler::search($this->Project, 'A', [
             'order' => 'title DESC',
@@ -84,7 +86,7 @@ class GroupsHandlerDatabaseTest extends TestCase
 
     public function testGetsOrderedGroupIdsAndGroupsContainingTag(): void
     {
-        self::assertSame([6, 5], Handler::getGroupIds($this->Project, [
+        self::assertSame([7, 6], Handler::getGroupIds($this->Project, [
             'order' => 'id DESC',
             'limit' => 2
         ]));
@@ -99,8 +101,37 @@ class GroupsHandlerDatabaseTest extends TestCase
             ['! Special', '123 Numbers', 'Apple', 'Apricot', 'Delta'],
             array_column($tree, 'title')
         );
-        self::assertSame('Zebra child', $tree[4]['children'][0]['title']);
-        self::assertSame([6], Handler::getTagGroupChildrenIds($this->Project, 3));
+        self::assertSame(
+            ['Lifecycle child', 'Zebra child'],
+            array_column($tree[4]['children'], 'title')
+        );
+        self::assertSame([7, 6], Handler::getTagGroupChildrenIds($this->Project, 3));
+    }
+
+    public function testLoadsSavesAndRemovesParentGroup(): void
+    {
+        $Group = new Group(7, $this->Project);
+        $Group->setTitle('<b>Updated title</b>');
+        $Group->setWorkingTitle('Updated working title');
+        $Group->setDescription('Updated description');
+        $Group->setPriority(9);
+        $Group->removeParentGroup();
+        $Group->save();
+
+        $data = $this->connection->createQueryBuilder()
+            ->select('*')
+            ->from($this->table)
+            ->where('id = :id')
+            ->setParameter('id', 7)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        self::assertIsArray($data);
+        self::assertSame('Updated title', $data['title']);
+        self::assertSame('Updated working title', $data['workingtitle']);
+        self::assertSame('Updated description', $data['desc']);
+        self::assertSame(9, (int)$data['priority']);
+        self::assertNull($data['parentId']);
     }
 
     private function createTable(): void
