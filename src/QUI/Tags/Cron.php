@@ -37,7 +37,7 @@ class Cron
         }
 
 
-        $Project = QUI::getProject($params['project'], $params['lang']);
+        $Project = static::resolveProject($params['project'], $params['lang']);
         $Connection = QUI::getDataBaseConnection();
 
         $tableSites = QUI::getDBProjectTableName('tags_sites', $Project);
@@ -96,9 +96,15 @@ class Cron
                 try {
                     $Site = $Project->get((int)$siteId);
 
-                    if ($Site->getAttribute('active')) {
-                        $siteIds[] = $siteId;
+                    if (!$Site->getAttribute('active')) {
+                        continue;
                     }
+
+                    if ($Site->getAttribute('deleted')) {
+                        continue;
+                    }
+
+                    $siteIds[] = $siteId;
                 } catch (QUI\Exception) {
                     continue;
                 }
@@ -155,5 +161,13 @@ class Cron
             } catch (QUI\Exception $Exception) {
             }
         }
+    }
+
+    /**
+     * Resolve the project whose tag caches are rebuilt.
+     */
+    protected static function resolveProject(string $project, string $lang): QUI\Projects\Project
+    {
+        return QUI::getProject($project, $lang);
     }
 }
