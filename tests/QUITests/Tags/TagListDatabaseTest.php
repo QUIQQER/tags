@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
 use QUI\Tags\Controls\TagList;
+use QUI\Tags\Groups\Handler;
 use ReflectionProperty;
 
 class TagListDatabaseTest extends TestCase
@@ -29,6 +30,7 @@ class TagListDatabaseTest extends TestCase
             'memory' => true
         ]);
         $this->setConnection($this->connection);
+        $this->resetHandlerCaches();
 
         $Project = $this->createMock(Project::class);
         $Project->method('getName')->willReturn('tagsphpunit');
@@ -44,10 +46,35 @@ class TagListDatabaseTest extends TestCase
         $Tags->addColumn('generated', 'boolean', ['default' => false]);
         $Tags->addColumn('generator', 'string', ['notnull' => false]);
         $Tags->setPrimaryKey(['tag']);
+        $Groups = $Schema->createTable(Handler::table($Project));
+        $Groups->addColumn('id', 'integer');
+        $Groups->addColumn('title', 'string');
+        $Groups->addColumn('workingtitle', 'string', ['default' => '']);
+        $Groups->addColumn('desc', 'text', ['notnull' => false]);
+        $Groups->addColumn('image', 'text', ['notnull' => false]);
+        $Groups->addColumn('tags', 'text', ['notnull' => false]);
+        $Groups->addColumn('priority', 'integer', ['default' => 1]);
+        $Groups->addColumn('generated', 'boolean', ['default' => false]);
+        $Groups->addColumn('generator', 'string', ['notnull' => false]);
+        $Groups->addColumn('parentId', 'integer', ['notnull' => false]);
+        $Groups->setPrimaryKey(['id']);
 
         foreach ($Schema->toSql($this->connection->getDatabasePlatform()) as $statement) {
             $this->connection->executeStatement($statement);
         }
+
+        $this->connection->insert(Handler::table($Project), [
+            'id' => 1,
+            'title' => 'PHPUnit group',
+            'workingtitle' => '',
+            'desc' => null,
+            'image' => null,
+            'tags' => ',apple,zebra,',
+            'priority' => 1,
+            'generated' => 0,
+            'generator' => null,
+            'parentId' => null
+        ]);
 
         foreach (
             [
@@ -74,6 +101,7 @@ class TagListDatabaseTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->resetHandlerCaches();
         $this->setConnection($this->originalConnection);
 
         parent::tearDown();
@@ -96,9 +124,29 @@ class TagListDatabaseTest extends TestCase
         self::assertCount(5, $this->TagList->getList('all'));
     }
 
+    public function testFiltersTagSectorByGroupAssignments(): void
+    {
+        self::assertSame(
+            ['Apple'],
+            array_column($this->TagList->getList('abc', 1), 'title')
+        );
+        self::assertSame(
+            ['Zebra'],
+            array_column($this->TagList->getList('vz', 1), 'title')
+        );
+    }
+
     private function setConnection(Connection $Connection): void
     {
         $QueryBuilder = new ReflectionProperty(QUI::class, 'QueryBuilder');
         $QueryBuilder->setValue(null, $Connection);
+    }
+
+    private function resetHandlerCaches(): void
+    {
+        foreach (['groups', 'trees'] as $propertyName) {
+            $Property = new ReflectionProperty(Handler::class, $propertyName);
+            $Property->setValue(null, []);
+        }
     }
 }

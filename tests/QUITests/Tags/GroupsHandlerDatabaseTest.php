@@ -12,6 +12,8 @@ use QUI;
 use QUI\Interfaces\Users\User;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
+use QUI\Tags\Controls\TagMenu;
+use QUI\Tags\Controls\TagSelect;
 use QUI\Tags\Groups\Group;
 use QUI\Tags\Groups\Handler;
 use ReflectionProperty;
@@ -239,6 +241,34 @@ class GroupsHandlerDatabaseTest extends TestCase
 
         $this->expectException(QUI\Tags\Exception::class);
         Handler::delete($this->Project, 3);
+    }
+
+    public function testMenuAndSelectBuildPrioritizedGroupsWithTags(): void
+    {
+        $PriorityGroup = Handler::get($this->Project, 2);
+        $PriorityGroup->setPriority(10);
+        $PriorityGroup->save();
+
+        $Menu = new TagMenu([
+            'Project' => $this->Project,
+            'selectedTags' => ['fruit']
+        ]);
+        $Select = new TagSelect([
+            'Project' => $this->Project,
+            'selectedTags' => ['red']
+        ]);
+
+        $menuChildren = $Menu->getChildren();
+        $selectChildren = $Select->getChildren();
+
+        self::assertSame('Apricot', $menuChildren[0]['title']);
+        self::assertSame(10, $menuChildren[0]['priority']);
+        self::assertSame(
+            array_column($menuChildren, 'id'),
+            array_column($selectChildren, 'id')
+        );
+        self::assertSame(['fruit'], $Menu->getAttribute('selectedTags'));
+        self::assertSame(['red'], $Select->getAttribute('selectedTags'));
     }
 
     private function createTables(): void
