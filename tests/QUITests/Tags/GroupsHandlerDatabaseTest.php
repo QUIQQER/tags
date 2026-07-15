@@ -269,6 +269,8 @@ class GroupsHandlerDatabaseTest extends TestCase
         );
         self::assertSame(['fruit'], $Menu->getAttribute('selectedTags'));
         self::assertSame(['red'], $Select->getAttribute('selectedTags'));
+        self::assertNotSame('', $Menu->getBody());
+        self::assertNotSame('', $Select->getBody());
     }
 
     private function createTables(): void

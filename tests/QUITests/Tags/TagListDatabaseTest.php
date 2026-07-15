@@ -10,6 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
+use QUI\Projects\Site;
 use QUI\Tags\Controls\TagList;
 use QUI\Tags\Groups\Handler;
 use ReflectionProperty;
@@ -35,6 +36,7 @@ class TagListDatabaseTest extends TestCase
         $Project = $this->createMock(Project::class);
         $Project->method('getName')->willReturn('tagsphpunit');
         $Project->method('getLang')->willReturn('en');
+        $Site = $this->createMock(Site::class);
         $table = QUI::getDBProjectTableName('tags', $Project);
         $Schema = new Schema();
         $Tags = $Schema->createTable($table);
@@ -96,7 +98,10 @@ class TagListDatabaseTest extends TestCase
             ]);
         }
 
-        $this->TagList = new TagList(['Project' => $Project]);
+        $this->TagList = new TagList([
+            'Project' => $Project,
+            'Site' => $Site
+        ]);
     }
 
     protected function tearDown(): void
@@ -134,6 +139,11 @@ class TagListDatabaseTest extends TestCase
             ['Zebra'],
             array_column($this->TagList->getList('vz', 1), 'title')
         );
+    }
+
+    public function testRendersTagListTemplate(): void
+    {
+        self::assertNotSame('', $this->TagList->getBody());
     }
 
     private function setConnection(Connection $Connection): void
