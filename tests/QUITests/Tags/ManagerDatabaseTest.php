@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace QUITests\Tags;
 
+require_once __DIR__ . '/ManagerDatabaseTestManager.php';
+
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
+use QUI\Projects\Site;
+use QUI\Projects\Site\Edit;
 use QUI\Tags\Manager;
 use ReflectionProperty;
 
@@ -18,11 +22,16 @@ class ManagerDatabaseTest extends TestCase
     private Connection $originalConnection;
     private Connection $connection;
     private Project $Project;
-    private Manager $Manager;
+    private ManagerDatabaseTestManager $Manager;
     private string $tagsTable;
     private string $cacheTable;
     private string $sitesTable;
     private string $groupsTable;
+
+    /**
+     * @var array<int, Site>
+     */
+    private array $Sites = [];
 
     protected function setUp(): void
     {
@@ -37,6 +46,9 @@ class ManagerDatabaseTest extends TestCase
         $this->Project = $this->createMock(Project::class);
         $this->Project->method('getName')->willReturn('tagsmanagerphpunit');
         $this->Project->method('getLang')->willReturn('en');
+        $this->Project->method('get')->willReturnCallback(
+            fn(int $siteId): Site => $this->Sites[$siteId] ?? throw new QUI\Exception('Unknown test site')
+        );
         $this->tagsTable = QUI::getDBProjectTableName('tags', $this->Project);
         $this->cacheTable = QUI::getDBProjectTableName('tags_cache', $this->Project);
         $this->sitesTable = QUI::getDBProjectTableName('tags_sites', $this->Project);
@@ -79,7 +91,11 @@ class ManagerDatabaseTest extends TestCase
             'title' => 'Second group',
             'tags' => ',GammaTag,'
         ]);
-        $this->Manager = new Manager($this->Project);
+        $SiteEdit = $this->createMock(Edit::class);
+        $SiteEdit->method('getAttribute')->willReturnCallback(
+            static fn(string $name): mixed => $name === 'active' ? 1 : null
+        );
+        $this->Manager = new ManagerDatabaseTestManager($this->Project, $SiteEdit);
         $this->resetManagerCaches();
 
         foreach (['AlphaTag', 'BetaTag', 'GammaTag'] as $tag) {
@@ -201,6 +217,47 @@ class ManagerDatabaseTest extends TestCase
         ], $cacheRows);
     }
 
+    public function testAssignsMultipleTagsAndFindsMatchingSites(): void
+    {
+        $this->Sites[10] = $this->createSite(10);
+        $this->Sites[11] = $this->createSite(11);
+        $this->Sites[20] = $this->createSite(20);
+        $this->Sites[21] = $this->createSite(21);
+
+        $this->Manager->setSiteTags(20, ['AlphaTag', 'BetaTag', 'MissingTag']);
+        $this->Manager->setSiteTags(21, ['AlphaTag', 'GammaTag']);
+
+        self::assertSame(['AlphaTag', 'BetaTag'], $this->Manager->getSiteTags(20));
+        self::assertSame(['AlphaTag', 'GammaTag'], $this->Manager->getSiteTags(21));
+
+        $siteIds = $this->Manager->getSiteIdsFromTags(['AlphaTag', 'BetaTag']);
+
+        self::assertSame(2, $siteIds[11]);
+        self::assertSame(2, $siteIds[20]);
+        self::assertSame(1, $siteIds[10]);
+        self::assertSame(1, $siteIds[12]);
+        self::assertSame(1, $siteIds[21]);
+        self::assertSame(
+            [10, 11, 20, 21],
+            array_map(
+                static fn(Site $Site): int => $Site->getId(),
+                $this->Manager->getSitesFromTags(['AlphaTag'], ['limit' => '0,4'])
+            )
+        );
+    }
+
+    public function testRemovingTagFromSiteUpdatesAssignmentsAndSearchCache(): void
+    {
+        $this->Sites[20] = $this->createSite(20);
+        $this->Manager->setSiteTags(20, ['AlphaTag', 'BetaTag']);
+
+        $this->Manager->removeTagFromSite(20, 'BetaTag');
+
+        self::assertSame(['AlphaTag'], $this->Manager->getSiteTags(20));
+        self::assertArrayHasKey(20, $this->Manager->getSiteIdsFromTags(['AlphaTag']));
+        self::assertArrayNotHasKey(20, $this->Manager->getSiteIdsFromTags(['BetaTag']));
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
@@ -250,6 +307,14 @@ class ManagerDatabaseTest extends TestCase
     {
         $QueryBuilder = new ReflectionProperty(QUI::class, 'QueryBuilder');
         $QueryBuilder->setValue(null, $Connection);
+    }
+
+    private function createSite(int $siteId): Site
+    {
+        $Site = $this->createMock(Site::class);
+        $Site->method('getId')->willReturn($siteId);
+
+        return $Site;
     }
 
     private function resetManagerCaches(): void

@@ -13,6 +13,7 @@ use QUI\Utils\Grid;
 use QUI\Utils\Security\Orthos;
 
 use function array_diff;
+use function array_filter;
 use function array_pad;
 use function array_search;
 use function array_slice;
@@ -1026,7 +1027,7 @@ class Manager
     public function setSiteTags(string | int $siteId, array $tags): void
     {
         $siteId = (int)$siteId;
-        $Site = new Edit($this->Project, $siteId);
+        $Site = $this->getSiteEdit($siteId);
         $isActive = $Site->getAttribute('active');
 
         $list = [];
@@ -1044,16 +1045,19 @@ class Manager
         $Connection = QUI::getDataBaseConnection();
 
         // entry exists?
-        $exists = $Connection->createQueryBuilder()
-            ->select(Doctrine::quoteIdentifier('id'))
+        $storedTags = $Connection->createQueryBuilder()
+            ->select(Doctrine::quoteIdentifier('tags'))
             ->from(Doctrine::quoteIdentifier($table))
             ->where(Doctrine::quoteIdentifier('id') . ' = :siteId')
             ->setParameter('siteId', $siteId)
             ->setMaxResults(1)
             ->executeQuery()
             ->fetchOne();
+        $previousTags = $storedTags === false
+            ? []
+            : array_values(array_filter(explode(',', (string)$storedTags)));
 
-        if ($exists === false) {
+        if ($storedTags === false) {
             $Connection->insert(Doctrine::quoteIdentifier($table), [
                 'id' => $siteId
             ]);
@@ -1067,6 +1071,12 @@ class Manager
 
         self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . $siteId] = $list;
         $this->clearSiteIdsFromTagsRequestCache();
+
+        $removedTags = array_diff($previousTags, $list);
+
+        if (!empty($removedTags)) {
+            $this->removeSiteFromTags($siteId, $removedTags);
+        }
 
         // if side is not active, don't generate the cache
         if (!$isActive) {
@@ -1124,6 +1134,14 @@ class Manager
                 ['tag' => $tag]
             );
         }
+    }
+
+    /**
+     * Create the editable site used while updating tag assignments.
+     */
+    protected function getSiteEdit(int $siteId): Edit
+    {
+        return new Edit($this->Project, $siteId);
     }
 
     /**
