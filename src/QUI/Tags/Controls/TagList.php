@@ -6,16 +6,20 @@
 
 namespace QUI\Tags\Controls;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Exception;
 use QUI;
 use QUI\Tags\Groups\Handler as TagGroupsHandler;
+use QUI\Utils\Doctrine;
 
+use function array_filter;
 use function array_unique;
+use function array_values;
 use function dirname;
-use function implode;
 use function is_array;
 use function is_null;
 use function json_decode;
+use function preg_match;
 
 /**
  * tag list control
@@ -97,55 +101,32 @@ class TagList extends QUI\Control
      */
     public function getList(string $sector, null | int $groupId = null): array
     {
-        switch ($sector) {
-            default:
-            case 'abc':
-                $where = '(title LIKE "a%" OR title LIKE "b%" OR title LIKE "c%")';
-                break;
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->getProject())))
+            ->orderBy(Doctrine::quoteIdentifier('title'), 'ASC');
+        $letters = match ($sector) {
+            'def' => ['d', 'e', 'f'],
+            'ghi' => ['g', 'h', 'i'],
+            'jkl' => ['j', 'k', 'l'],
+            'mno' => ['m', 'n', 'o'],
+            'pqr' => ['p', 'q', 'r'],
+            'stu' => ['s', 't', 'u'],
+            'vz' => ['v', 'w', 'x', 'y', 'z'],
+            '123', 'special', 'all' => [],
+            default => ['a', 'b', 'c']
+        };
 
-            case 'def':
-                $where = '(title LIKE "d%" OR title LIKE "e%" OR title LIKE "f%")';
-                break;
+        if (!empty($letters)) {
+            $expressions = [];
 
-            case 'ghi':
-                $where = '(title LIKE "g%" OR title LIKE "h%" OR title LIKE "i%")';
-                break;
+            foreach ($letters as $index => $letter) {
+                $parameter = 'letter' . $index;
+                $expressions[] = Doctrine::quoteIdentifier('title') . ' LIKE :' . $parameter;
+                $QueryBuilder->setParameter($parameter, $letter . '%');
+            }
 
-            case 'jkl':
-                $where = '(title LIKE "j%" OR title LIKE "k%" OR title LIKE "l%")';
-                break;
-
-            case 'mno':
-                $where = '(title LIKE "m%" OR title LIKE "n%" OR title LIKE "o%")';
-                break;
-
-            case 'pqr':
-                $where = '(title LIKE "p%" OR title LIKE "q%" OR title LIKE "r%")';
-                break;
-
-            case 'stu':
-                $where = '(title LIKE "s%" OR title LIKE "t%" OR title LIKE "u%")';
-                break;
-
-            case '123':
-                $where = 'title REGEXP \'^[0-9]\'';
-                break;
-
-            case 'special':
-                $where = 'title REGEXP \'^[^A-Za-z0-9]\'';
-                break;
-
-            case 'all':
-                $where = '';
-                break;
-
-            case 'vz':
-                $where = '(title LIKE "v%" OR
-                        title LIKE "w%" OR
-                        title LIKE "x%" OR
-                        title LIKE "y%" OR
-                        title LIKE "z%")';
-                break;
+            $QueryBuilder->andWhere($QueryBuilder->expr()->or(...$expressions));
         }
 
         if (!is_null($groupId)) {
@@ -163,18 +144,23 @@ class TagList extends QUI\Control
 
             $tags = array_unique($tags);
 
-            if (empty($where)) {
-                $where .= '`tag` IN (\'' . implode('\',\'', $tags) . '\')';
-            } else {
-                $where .= ' AND `tag` IN (\'' . implode('\',\'', $tags) . '\')';
-            }
+            $QueryBuilder
+                ->andWhere(Doctrine::quoteIdentifier('tag') . ' IN (:tags)')
+                ->setParameter('tags', $tags, ArrayParameterType::STRING);
         }
 
-        return array_values(QUI::getDataBase()->fetch([
-            'from' => QUI::getDBProjectTableName('tags', $this->getProject()),
-            'order' => 'title',
-            'where' => $where
-        ]));
+        $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
+
+        if ($sector !== '123' && $sector !== 'special') {
+            return $result;
+        }
+
+        $pattern = $sector === 'special' ? '/^[^A-Za-z0-9]/' : '/^[0-9]/';
+
+        return array_values(array_filter(
+            $result,
+            static fn(array $tag): bool => preg_match($pattern, (string)($tag['title'] ?? '')) === 1
+        ));
     }
 
     /**

@@ -6,12 +6,25 @@
 
 namespace QUI\Tags\Groups;
 
+use Doctrine\DBAL\Query\QueryBuilder;
 use QUI;
 use QUI\Permissions\Exception;
 use QUI\Projects\Project;
+use QUI\Utils\Doctrine;
 
+use function array_filter;
+use function array_map;
+use function array_pad;
 use function array_values;
+use function count;
+use function explode;
+use function in_array;
+use function is_array;
+use function is_string;
+use function preg_match;
 use function strnatcasecmp;
+use function strtoupper;
+use function trim;
 use function usort;
 
 /**
@@ -80,16 +93,14 @@ class Handler
     {
         QUI\Permissions\Permission::checkPermission('tags.group.create', $User);
 
-        QUI::getDataBase()->insert(
-            self::table($Project),
+        $Connection = QUI::getDataBaseConnection();
+        $Connection->insert(
+            Doctrine::quoteIdentifier(self::table($Project)),
             ['title' => QUI\Utils\Security\Orthos::cleanHTML($title)]
         );
 
-        $gid = QUI::getDataBase()->getPDO()?->lastInsertId();
-
-        if ($gid === null) {
-            throw new QUI\Database\Exception('Database connection unavailable');
-        }
+        $gid = $Connection->lastInsertId();
+        self::clearTreeCache($Project);
 
         return self::get($Project, (int)$gid);
     }
@@ -105,29 +116,13 @@ class Handler
      */
     public static function count(Project $Project, array $queryParams = []): int
     {
-        $query = [
-            'from' => self::table($Project),
-            'count' => [
-                'select' => 'id',
-                'as' => 'count'
-            ]
-        ];
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('COUNT(' . Doctrine::quoteIdentifier('id') . ')')
+            ->from(Doctrine::quoteIdentifier(self::table($Project)));
 
-        if (isset($queryParams['where'])) {
-            $query['where'] = $queryParams['where'];
-        }
+        self::applyQueryParams($QueryBuilder, $queryParams, false);
 
-        if (isset($queryParams['where_or'])) {
-            $query['where_or'] = $queryParams['where_or'];
-        }
-
-        $data = QUI::getDataBase()->fetch($query);
-
-        if (isset($data[0]['count'])) {
-            return (int)$data[0]['count'];
-        }
-
-        return 0;
+        return (int)$QueryBuilder->executeQuery()->fetchOne();
     }
 
     /**
@@ -150,15 +145,15 @@ class Handler
         $groupId = (int)$groupId;
 
         // check if group has children
-        $result = QUI::getDataBase()->fetch([
-            'count' => 1,
-            'from' => self::table($Project),
-            'where' => [
-                'parentId' => $groupId
-            ]
-        ]);
-
-        $hasChildren = boolval((int)current(current($result)));
+        $Connection = QUI::getDataBaseConnection();
+        $table = Doctrine::quoteIdentifier(self::table($Project));
+        $hasChildren = (int)$Connection->createQueryBuilder()
+            ->select('COUNT(*)')
+            ->from($table)
+            ->where(Doctrine::quoteIdentifier('parentId') . ' = :groupId')
+            ->setParameter('groupId', $groupId)
+            ->executeQuery()
+            ->fetchOne() > 0;
 
         if ($hasChildren) {
             throw new QUI\Tags\Exception([
@@ -167,8 +162,8 @@ class Handler
             ]);
         }
 
-        QUI::getDataBase()->delete(
-            self::table($Project),
+        $Connection->delete(
+            $table,
             [
                 'id' => $groupId
             ]
@@ -177,6 +172,16 @@ class Handler
         if (isset(self::$groups[$project][$lang][$groupId])) {
             unset(self::$groups[$project][$lang][$groupId]);
         }
+
+        self::clearTreeCache($Project);
+    }
+
+    /**
+     * Clear the request-local hierarchy cache for a project.
+     */
+    public static function clearTreeCache(Project $Project): void
+    {
+        unset(self::$trees[$Project->getName()][$Project->getLang()]);
     }
 
     /**
@@ -189,27 +194,17 @@ class Handler
      */
     public static function search(Project $Project, string $search, array $queryParams = []): array
     {
-        $query = [
-            'from' => self::table($Project),
-            'where' => [
-                'title' => [
-                    'value' => $search,
-                    'type' => 'LIKE%'
-                ]
-            ]
-        ];
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(self::table($Project)))
+            ->where(Doctrine::quoteIdentifier('title') . ' LIKE :search')
+            ->setParameter('search', $search . '%');
 
-        if (isset($queryParams['order'])) {
-            $query['order'] = $queryParams['order'];
-        }
-
-        if (isset($queryParams['limit'])) {
-            $query['limit'] = $queryParams['limit'];
-        }
+        self::applyQueryParams($QueryBuilder, $queryParams);
 
         try {
-            return array_values(QUI::getDataBase()->fetch($query));
-        } catch (QUI\Exception $exception) {
+            return $QueryBuilder->executeQuery()->fetchAllAssociative();
+        } catch (\Exception $exception) {
             QUI\System\Log::addError($exception->getMessage());
             return [];
         }
@@ -225,62 +220,46 @@ class Handler
      */
     public static function getBySektor(Project $Project, string $sector): array
     {
-        switch ($sector) {
-            default:
-            case 'abc':
-                $where = 'title LIKE "a%" OR title LIKE "b%" OR title LIKE "c%"';
-                break;
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(self::table($Project)))
+            ->orderBy(Doctrine::quoteIdentifier('title'), 'ASC');
+        $letters = match ($sector) {
+            'def' => ['d', 'e', 'f'],
+            'ghi' => ['g', 'h', 'i'],
+            'jkl' => ['j', 'k', 'l'],
+            'mno' => ['m', 'n', 'o'],
+            'pqr' => ['p', 'q', 'r'],
+            'stu' => ['s', 't', 'u'],
+            'vz' => ['v', 'w', 'x', 'y', 'z'],
+            '123', 'special', 'all' => [],
+            default => ['a', 'b', 'c']
+        };
 
-            case 'def':
-                $where = 'title LIKE "d%" OR title LIKE "e%" OR title LIKE "f%"';
-                break;
+        if (!empty($letters)) {
+            $expressions = [];
 
-            case 'ghi':
-                $where = 'title LIKE "g%" OR title LIKE "h%" OR title LIKE "i%"';
-                break;
+            foreach ($letters as $index => $letter) {
+                $parameter = 'letter' . $index;
+                $expressions[] = Doctrine::quoteIdentifier('title') . ' LIKE :' . $parameter;
+                $QueryBuilder->setParameter($parameter, $letter . '%');
+            }
 
-            case 'jkl':
-                $where = 'title LIKE "j%" OR title LIKE "k%" OR title LIKE "l%"';
-                break;
-
-            case 'mno':
-                $where = 'title LIKE "m%" OR title LIKE "n%" OR title LIKE "o%"';
-                break;
-
-            case 'pqr':
-                $where = 'title LIKE "p%" OR title LIKE "q%" OR title LIKE "r%"';
-                break;
-
-            case 'stu':
-                $where = 'title LIKE "s%" OR title LIKE "t%" OR title LIKE "u%"';
-                break;
-
-            case '123':
-                $where = 'title REGEXP \'^[^A-Za-z]\'';
-                break;
-
-            case 'vz':
-                $where = 'title LIKE "v%" OR
-                        title LIKE "w%" OR
-                        title LIKE "x%" OR
-                        title LIKE "y%" OR
-                        title LIKE "z%"';
-                break;
-
-            case 'special':
-                $where = 'title REGEXP \'^[^A-Za-z0-9]\'';
-                break;
-
-            case 'all':
-                $where = '';
-                break;
+            $QueryBuilder->andWhere($QueryBuilder->expr()->or(...$expressions));
         }
 
-        return array_values(QUI::getDataBase()->fetch([
-            'from' => self::table($Project),
-            'order' => 'title',
-            'where' => $where
-        ]));
+        $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
+
+        if ($sector !== '123' && $sector !== 'special') {
+            return $result;
+        }
+
+        $pattern = $sector === 'special' ? '/^[^A-Za-z0-9]/' : '/^[^A-Za-z]/';
+
+        return array_values(array_filter(
+            $result,
+            static fn(array $group): bool => preg_match($pattern, (string)($group['title'] ?? '')) === 1
+        ));
     }
 
     /**
@@ -365,38 +344,13 @@ class Handler
      */
     public static function getGroupIds(Project $Project, array $params = []): array
     {
-        $query = [
-            'from' => self::table($Project)
-        ];
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select(Doctrine::quoteIdentifier('id'))
+            ->from(Doctrine::quoteIdentifier(self::table($Project)));
 
-        if (isset($params['where'])) {
-            $query['where'] = $params['where'];
-        }
+        self::applyQueryParams($QueryBuilder, $params);
 
-        if (isset($params['where_or'])) {
-            $query['where_or'] = $params['where_or'];
-        }
-
-        if (isset($params['limit'])) {
-            $query['limit'] = $params['limit'];
-        }
-
-        if (!empty($params['order'])) {
-            $query['order'] = $params['order'];
-        }
-
-        if (isset($params['debug'])) {
-            $query['debug'] = $params['debug'];
-        }
-
-        $result = [];
-        $data = QUI::getDataBase()->fetch($query);
-
-        foreach ($data as $entry) {
-            $result[] = (int)$entry['id'];
-        }
-
-        return $result;
+        return array_map('intval', $QueryBuilder->executeQuery()->fetchFirstColumn());
     }
 
     /**
@@ -452,18 +406,26 @@ class Handler
     protected static function buildTree(Project $Project, ?int $parentTagGroupId = null): array
     {
         $tree = [];
+        $Connection = QUI::getDataBaseConnection();
+        $table = Doctrine::quoteIdentifier(self::table($Project));
+        $parentId = Doctrine::quoteIdentifier('parentId');
+        $QueryBuilder = $Connection->createQueryBuilder()
+            ->select(
+                Doctrine::quoteIdentifier('id'),
+                Doctrine::quoteIdentifier('title'),
+                $parentId
+            )
+            ->from($table);
 
-        $result = QUI::getDataBase()->fetch([
-            'select' => [
-                'id',
-                'title',
-                'parentId'
-            ],
-            'from' => self::table($Project),
-            'where' => [
-                'parentId' => $parentTagGroupId
-            ]
-        ]);
+        if ($parentTagGroupId === null) {
+            $QueryBuilder->where($parentId . ' IS NULL');
+        } else {
+            $QueryBuilder
+                ->where($parentId . ' = :parentId')
+                ->setParameter('parentId', $parentTagGroupId);
+        }
+
+        $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
 
         /**
          * Check if a tag group has any children.
@@ -473,17 +435,15 @@ class Handler
          *
          * @throws QUI\Database\Exception
          */
-        $hasChildren = function (int $tagGroupId) use ($Project): bool {
-            $result = QUI::getDataBase()->fetch([
-                'select' => ['id'],
-                'from' => self::table($Project),
-                'where' => [
-                    'parentId' => $tagGroupId
-                ],
-                'limit' => 1
-            ]);
-
-            return !empty($result);
+        $hasChildren = function (int $tagGroupId) use ($Connection, $table, $parentId): bool {
+            return $Connection->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('id'))
+                ->from($table)
+                ->where($parentId . ' = :parentId')
+                ->setParameter('parentId', $tagGroupId)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchOne() !== false;
         };
 
         foreach ($result as $tagGroup) {
@@ -501,6 +461,140 @@ class Handler
         }
 
         return self::sortGroupsAlphabetically($tree);
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    protected static function applyQueryParams(
+        QueryBuilder $QueryBuilder,
+        array $params,
+        bool $applyLimitAndOrder = true
+    ): void {
+        self::applyConditions($QueryBuilder, $params['where'] ?? null, false);
+        self::applyConditions($QueryBuilder, $params['where_or'] ?? null, true);
+
+        if (!$applyLimitAndOrder) {
+            return;
+        }
+
+        if (is_string($params['order'] ?? null)) {
+            foreach (explode(',', $params['order']) as $order) {
+                [$field, $direction] = array_pad(explode(' ', trim($order), 2), 2, 'ASC');
+
+                if (!in_array($field, self::getQueryColumns(), true)) {
+                    continue;
+                }
+
+                $direction = strtoupper($direction);
+
+                if ($direction !== 'ASC' && $direction !== 'DESC') {
+                    $direction = 'ASC';
+                }
+
+                $QueryBuilder->addOrderBy(Doctrine::quoteIdentifier($field), $direction);
+            }
+        }
+
+        Doctrine::applyLimit($QueryBuilder, $params['limit'] ?? null);
+    }
+
+    protected static function applyConditions(QueryBuilder $QueryBuilder, mixed $conditions, bool $useOr): void
+    {
+        if (!is_array($conditions) || empty($conditions)) {
+            return;
+        }
+
+        $expressions = [];
+        $parameterOffset = count($QueryBuilder->getParameters());
+
+        foreach ($conditions as $field => $condition) {
+            if (!is_string($field) || !in_array($field, self::getQueryColumns(), true)) {
+                continue;
+            }
+
+            $quotedField = Doctrine::quoteIdentifier($field);
+
+            if ($condition === null) {
+                $expressions[] = $quotedField . ' IS NULL';
+                continue;
+            }
+
+            $operator = '=';
+            $value = $condition;
+
+            if (is_array($condition) && isset($condition['type'], $condition['value'])) {
+                $type = strtoupper((string)$condition['type']);
+                $value = $condition['value'];
+
+                switch ($type) {
+                    case 'LIKE%':
+                        $operator = 'LIKE';
+                        $value = (string)$value . '%';
+                        break;
+
+                    case '%LIKE':
+                        $operator = 'LIKE';
+                        $value = '%' . (string)$value;
+                        break;
+
+                    case '%LIKE%':
+                        $operator = 'LIKE';
+                        $value = '%' . (string)$value . '%';
+                        break;
+
+                    case 'NOT':
+                        $operator = '<>';
+                        break;
+
+                    default:
+                        $operator = in_array($type, ['=', '<>', '<', '<=', '>', '>=', 'LIKE'], true)
+                            ? $type
+                            : '=';
+                }
+            }
+
+            if (is_array($value)) {
+                continue;
+            }
+
+            $parameter = 'groupCondition' . $parameterOffset;
+            $parameterOffset++;
+            $expressions[] = $quotedField . ' ' . $operator . ' :' . $parameter;
+            $QueryBuilder->setParameter($parameter, $value);
+        }
+
+        if (empty($expressions)) {
+            return;
+        }
+
+        if ($useOr) {
+            $QueryBuilder->andWhere($QueryBuilder->expr()->or(...$expressions));
+            return;
+        }
+
+        foreach ($expressions as $expression) {
+            $QueryBuilder->andWhere($expression);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected static function getQueryColumns(): array
+    {
+        return [
+            'id',
+            'title',
+            'workingtitle',
+            'desc',
+            'image',
+            'tags',
+            'priority',
+            'generated',
+            'generator',
+            'parentId'
+        ];
     }
 
     /**
