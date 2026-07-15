@@ -6,7 +6,9 @@
 
 use QUI\Tags\Manager;
 use QUI\Utils\Grid;
+use QUI\Utils\Doctrine;
 use QUI\Utils\Security\Orthos;
+use Doctrine\DBAL\ArrayParameterType;
 
 /**
  * Get all sites a tag is associated with
@@ -35,8 +37,6 @@ QUI::getAjax()->registerFunction(
         $searchParams = Orthos::clearArray(json_decode($searchParams, true));
         $Grid = new Grid($searchParams);
         $gridParams = $Grid->parseDBParams($searchParams);
-        $order = '';
-
         if (empty($siteIds)) {
             return $Grid->parseResult(
                 [],
@@ -44,28 +44,22 @@ QUI::getAjax()->registerFunction(
             );
         }
 
-        if (!empty($searchParams['sortOn'])) {
-            $order = $searchParams['sortOn'];
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select(Doctrine::quoteIdentifier('id'))
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('sites', $Project)))
+            ->where(Doctrine::quoteIdentifier('id') . ' IN (:siteIds)')
+            ->setParameter('siteIds', array_map('intval', $siteIds), ArrayParameterType::INTEGER);
+        $allowedSortColumns = ['id', 'title', 'name', 'c_date', 'e_date'];
+        $sortOn = $searchParams['sortOn'] ?? null;
 
-            if (!empty($searchParams['sortBy'])) {
-                $order .= ' ' . $searchParams['sortBy'];
-            }
+        if (is_string($sortOn) && in_array($sortOn, $allowedSortColumns, true)) {
+            $sortBy = strtoupper((string)($searchParams['sortBy'] ?? 'ASC'));
+            $sortBy = $sortBy === 'DESC' ? 'DESC' : 'ASC';
+            $QueryBuilder->orderBy(Doctrine::quoteIdentifier($sortOn), $sortBy);
         }
 
-        $result = QUI::getDataBase()->fetch([
-            'select' => [
-                'id'
-            ],
-            'from' => QUI::getDBProjectTableName('sites', $Project),
-            'where' => [
-                'id' => [
-                    'type' => 'IN',
-                    'value' => $siteIds
-                ]
-            ],
-            'order' => empty($order) ? null : $order,
-            'limit' => $gridParams['limit']
-        ]);
+        Doctrine::applyLimit($QueryBuilder, $gridParams['limit'] ?? null);
+        $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
 
         foreach ($result as $row) {
             $Site = $Project->get($row['id']);

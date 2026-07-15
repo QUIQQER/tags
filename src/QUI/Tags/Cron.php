@@ -7,6 +7,7 @@
 namespace QUI\Tags;
 
 use QUI;
+use QUI\Utils\Doctrine;
 
 use function count;
 use function explode;
@@ -36,22 +37,19 @@ class Cron
         }
 
 
-        $Project = QUI::getProject($params['project'], $params['lang']);
-        $DataBase = QUI::getDataBase();
+        $Project = static::resolveProject($params['project'], $params['lang']);
+        $Connection = QUI::getDataBaseConnection();
 
         $tableSites = QUI::getDBProjectTableName('tags_sites', $Project);
         $tableSiteCache = QUI::getDBProjectTableName('tags_siteCache', $Project);
         $tableCache = QUI::getDBProjectTableName('tags_cache', $Project);
-        $Table = $DataBase->table();
-
-        if ($Table === null) {
-            return;
-        }
 
         // get ids
-        $result = $DataBase->fetch([
-            'from' => $tableSites
-        ]);
+        $result = $Connection->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier($tableSites))
+            ->executeQuery()
+            ->fetchAllAssociative();
 
         $list = [];
         $_tmp = [];
@@ -84,7 +82,11 @@ class Cron
         /**
          * Tag cache
          */
-        $Table->truncate($tableCache);
+        $Connection->executeStatement(
+            $Connection->getDatabasePlatform()->getTruncateTableSQL(
+                $tableCache
+            )
+        );
 
         foreach ($list as $tag => $entry) {
             $siteIds = [];
@@ -94,15 +96,21 @@ class Cron
                 try {
                     $Site = $Project->get((int)$siteId);
 
-                    if ($Site->getAttribute('active')) {
-                        $siteIds[] = $siteId;
+                    if (!$Site->getAttribute('active')) {
+                        continue;
                     }
+
+                    if ($Site->getAttribute('deleted')) {
+                        continue;
+                    }
+
+                    $siteIds[] = $siteId;
                 } catch (QUI\Exception) {
                     continue;
                 }
             }
 
-            $DataBase->insert($tableCache, [
+            $Connection->insert(Doctrine::quoteIdentifier($tableCache), [
                 'tag' => $tag,
                 'sites' => ',' . implode(',', $siteIds) . ',',
                 'count' => count($siteIds)
@@ -112,7 +120,11 @@ class Cron
         /**
          * Sites cache
          */
-        $Table->truncate($tableSiteCache);
+        $Connection->executeStatement(
+            $Connection->getDatabasePlatform()->getTruncateTableSQL(
+                $tableSiteCache
+            )
+        );
 
         foreach ($result as $entry) {
             if (empty($entry['tags'])) {
@@ -138,7 +150,7 @@ class Cron
                     continue;
                 }
 
-                $DataBase->insert($tableSiteCache, [
+                $Connection->insert(Doctrine::quoteIdentifier($tableSiteCache), [
                     'id' => $Site->getId(),
                     'name' => $Site->getAttribute('name'),
                     'title' => $Site->getAttribute('title'),
@@ -149,5 +161,13 @@ class Cron
             } catch (QUI\Exception $Exception) {
             }
         }
+    }
+
+    /**
+     * Resolve the project whose tag caches are rebuilt.
+     */
+    protected static function resolveProject(string $project, string $lang): QUI\Projects\Project
+    {
+        return QUI::getProject($project, $lang);
     }
 }

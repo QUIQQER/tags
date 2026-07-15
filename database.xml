@@ -2,62 +2,55 @@
 <database>
     <projects>
         <table name="tags" no-auto-update="1" no-site-reference="1">
-            <field type="varchar( 255 ) NOT NULL PRIMARY KEY">tag</field>
-            <field type="varchar( 255 ) NOT NULL">title</field>
-            <field type="text NULL">desc</field>
-            <field type="text NULL">image</field>
-            <field type="varchar( 20 ) DEFAULT NULL">url</field>
-            <field type="int( 1 ) DEFAULT 0">generated</field>
-            <field type="varchar( 255 ) DEFAULT NULL">generator</field>
-            <primary>tag</primary>
+            <field type="string" length="255" primary="true">tag</field>
+            <field type="string" length="255">title</field>
+            <field type="text" nullable="true">desc</field>
+            <field type="text" nullable="true">image</field>
+            <field type="string" length="20" nullable="true" default="null">url</field>
+            <field type="boolean" default="0">generated</field>
+            <field type="string" length="255" nullable="true" default="null">generator</field>
             <index>title</index>
         </table>
 
         <table name="tags_groups" no-auto-update="1" no-site-reference="1">
-            <field type="bigint( 20 ) NOT NULL PRIMARY KEY">id</field>
-            <field type="varchar( 255 ) NOT NULL DEFAULT ''">title</field>
-            <field type="varchar( 255 ) NOT NULL DEFAULT ''">workingtitle</field>
-            <field type="text NULL">desc</field>
-            <field type="text NULL">image</field>
-            <field type="text NULL">tags</field>
-            <field type="int( 4 ) DEFAULT 1">priority</field>
-            <field type="int( 1 ) DEFAULT 0">generated</field>
-            <field type="varchar( 255 ) DEFAULT NULL">generator</field>
-            <field type="bigint( 20 ) NULL">parentId</field>
-            <auto_increment>id</auto_increment>
+            <field type="bigint" autoincrement="true" primary="true">id</field>
+            <field type="string" length="255" default="">title</field>
+            <field type="string" length="255" default="">workingtitle</field>
+            <field type="text" nullable="true">desc</field>
+            <field type="text" nullable="true">image</field>
+            <field type="text" nullable="true">tags</field>
+            <field type="integer" default="1">priority</field>
+            <field type="boolean" default="0">generated</field>
+            <field type="string" length="255" nullable="true" default="null">generator</field>
+            <field type="bigint" nullable="true">parentId</field>
             <index>title</index>
             <index>parentId</index>
         </table>
 
         <table name="tags_groups_cache" no-auto-update="1" no-site-reference="1">
-            <field type="bigint( 20 ) NOT NULL PRIMARY KEY">id</field>
-            <field type="MEDIUMTEXT">tags</field>
-            <field type="MEDIUMINT UNSIGNED NOT NULL">count</field>
-            <primary>id</primary>
+            <field type="bigint" primary="true">id</field>
+            <field type="text">tags</field>
+            <field type="integer">count</field>
         </table>
 
         <table name="tags_cache" no-auto-update="1" no-site-reference="1">
-            <field type="varchar( 255 ) NOT NULL PRIMARY KEY">tag</field>
-            <field type="text NULL">sites</field>
-            <field type="MEDIUMINT UNSIGNED NOT NULL">count</field>
-
-            <primary>tag</primary>
+            <field type="string" length="255" primary="true">tag</field>
+            <field type="text" nullable="true">sites</field>
+            <field type="integer">count</field>
         </table>
 
         <table name="tags_siteCache" no-auto-update="1" no-site-reference="1">
-            <field type="bigint( 20 ) NOT NULL PRIMARY KEY">id</field>
-            <field type="varchar( 255 ) DEFAULT NULL">name</field>
-            <field type="tinytext">title</field>
-            <field type="text NULL">tags</field>
-            <field type="timestamp NULL DEFAULT NULL">c_date</field>
-            <field type="timestamp DEFAULT NOW() ON UPDATE NOW()">e_date</field>
-            <primary>id</primary>
+            <field type="bigint" primary="true">id</field>
+            <field type="string" length="255" nullable="true" default="null">name</field>
+            <field type="string" length="255">title</field>
+            <field type="text" nullable="true">tags</field>
+            <field type="datetime" nullable="true" default="null">c_date</field>
+            <field type="datetime" default="CURRENT_TIMESTAMP">e_date</field>
         </table>
 
         <table name="tags_sites" no-auto-update="1" no-site-reference="1">
-            <field type="bigint( 20 ) NOT NULL">id</field>
-            <field type="text NULL">tags</field>
-            <primary>id</primary>
+            <field type="bigint" primary="true">id</field>
+            <field type="text" nullable="true">tags</field>
         </table>
     </projects>
 </database>
