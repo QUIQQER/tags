@@ -3,7 +3,6 @@
 namespace QUI\Tags;
 
 use Doctrine\DBAL\ArrayParameterType;
-use PDO;
 use QUI;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
@@ -14,6 +13,7 @@ use QUI\Utils\Grid;
 use QUI\Utils\Security\Orthos;
 
 use function array_diff;
+use function array_pad;
 use function array_search;
 use function array_slice;
 use function array_unique;
@@ -747,31 +747,30 @@ class Manager
     public function searchTags(string $search, array $queryParams = []): array
     {
         $search = mb_strtolower($search);
-        $query = [
-            'from' => QUI::getDBProjectTableName('tags', $this->Project),
-            'where_or' => [
-                'tag' => [
-                    'value' => $search,
-                    'type' => '%LIKE%'
-                ],
-                'title' => [
-                    'value' => $search,
-                    'type' => '%LIKE%'
-                ]
-            ]
-        ];
+        $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select('*')
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
+            ->where(
+                Doctrine::quoteIdentifier('tag') . ' LIKE :search OR ' .
+                Doctrine::quoteIdentifier('title') . ' LIKE :search'
+            )
+            ->setParameter('search', '%' . $search . '%');
 
-        if (isset($queryParams['order'])) {
-            $query['order'] = $queryParams['order'];
+        if (is_string($queryParams['order'] ?? null)) {
+            [$field, $direction] = array_pad(explode(' ', trim($queryParams['order']), 2), 2, 'ASC');
+
+            if (in_array($field, ['tag', 'title', 'url', 'generated', 'generator'], true)) {
+                $direction = strtoupper($direction);
+                $direction = $direction === 'DESC' ? 'DESC' : 'ASC';
+                $QueryBuilder->orderBy(Doctrine::quoteIdentifier($field), $direction);
+            }
         }
 
-        if (isset($queryParams['limit'])) {
-            $query['limit'] = $queryParams['limit'];
-        }
+        Doctrine::applyLimit($QueryBuilder, $queryParams['limit'] ?? null);
 
         try {
-            $result = QUI::getDataBase()->fetch($query);
-        } catch (QUI\Exception $Exception) {
+            $result = $QueryBuilder->executeQuery()->fetchAllAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];
@@ -810,29 +809,24 @@ class Manager
         $cacheKey = $this->getProjectCacheKey() . '/siteIds/' . implode(',', $tagList);
 
         if (!isset(self::$siteIdsFromTagsCache[$cacheKey])) {
-            // search string
-            $where = '';
-
-            for ($i = 0, $len = count($tagList); $i < $len; $i++) {
-                $where .= ' tag = "' . $tagList[$i] . '"';
-
-                if ($i != $len - 1) {
-                    $where .= ' OR ';
-                }
-            }
-
             try {
-                $result = QUI::getDataBase()->fetch([
-                    'from' => $cacheTable,
-                    'where' => $where
-                ]);
-            } catch (QUI\Exception $Exception) {
+                $result = QUI::getDataBaseConnection()->createQueryBuilder()
+                    ->select(
+                        Doctrine::quoteIdentifier('tag'),
+                        Doctrine::quoteIdentifier('sites')
+                    )
+                    ->from(Doctrine::quoteIdentifier($cacheTable))
+                    ->where(Doctrine::quoteIdentifier('tag') . ' IN (:tags)')
+                    ->setParameter('tags', $tagList, ArrayParameterType::STRING)
+                    ->executeQuery()
+                    ->fetchAllAssociative();
+            } catch (\Exception $Exception) {
                 QUI\System\Log::addError($Exception->getMessage());
 
                 return [];
             }
 
-            if (!isset($result[0])) {
+            if (empty($result)) {
                 self::$siteIdsFromTagsCache[$cacheKey] = [];
             } else {
                 $ids = [];
@@ -947,32 +941,22 @@ class Manager
             return $this->groupsFromTags[$tag];
         }
 
-        $PDO = QUI::getDataBase()->getPDO();
-
-        if ($PDO === null) {
-            return [];
-        }
-
         $table = QUI::getDBProjectTableName('tags_groups', $this->Project);
 
-        $query = "
-            SELECT *
-            FROM {$table}
-            WHERE
-                tags LIKE :search1 OR
-                tags LIKE :search2 OR
-                tags LIKE :search3
-        ";
-
-        $Statement = $PDO->prepare($query);
-
-        $Statement->bindValue('search1', '%,' . $tag . ',%');
-        $Statement->bindValue('search2', $tag . ',%');
-        $Statement->bindValue('search3', '%,' . $tag);
-
         try {
-            $Statement->execute();
-            $this->groupsFromTags[$tag] = array_values($Statement->fetchAll(PDO::FETCH_ASSOC));
+            $tags = Doctrine::quoteIdentifier('tags');
+            $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select('*')
+                ->from(Doctrine::quoteIdentifier($table))
+                ->where(
+                    $tags . ' LIKE :search1 OR ' .
+                    $tags . ' LIKE :search2 OR ' .
+                    $tags . ' LIKE :search3'
+                )
+                ->setParameter('search1', '%,' . $tag . ',%')
+                ->setParameter('search2', $tag . ',%')
+                ->setParameter('search3', '%,' . $tag);
+            $this->groupsFromTags[$tag] = $QueryBuilder->executeQuery()->fetchAllAssociative();
 
             return $this->groupsFromTags[$tag];
         } catch (\Exception $Exception) {

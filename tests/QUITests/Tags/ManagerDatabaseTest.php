@@ -22,6 +22,7 @@ class ManagerDatabaseTest extends TestCase
     private string $tagsTable;
     private string $cacheTable;
     private string $sitesTable;
+    private string $groupsTable;
 
     protected function setUp(): void
     {
@@ -39,12 +40,18 @@ class ManagerDatabaseTest extends TestCase
         $this->tagsTable = QUI::getDBProjectTableName('tags', $this->Project);
         $this->cacheTable = QUI::getDBProjectTableName('tags_cache', $this->Project);
         $this->sitesTable = QUI::getDBProjectTableName('tags_sites', $this->Project);
+        $this->groupsTable = QUI::getDBProjectTableName('tags_groups', $this->Project);
         $this->createTables();
         $this->insertTag('AlphaTag', 'Alpha', null);
         $this->insertTag('BetaTag', 'Beta', 'phpunit-generator');
         $this->insertTag('GammaTag', 'Gamma', null);
         $this->connection->insert($this->cacheTable, [
             'tag' => 'Alphatag',
+            'sites' => ',10,11,',
+            'count' => 2
+        ]);
+        $this->connection->insert($this->cacheTable, [
+            'tag' => 'AlphaTag',
             'sites' => ',10,11,',
             'count' => 2
         ]);
@@ -62,7 +69,18 @@ class ManagerDatabaseTest extends TestCase
             'id' => 11,
             'tags' => ',Alphatag,Betatag,Gammatag,'
         ]);
+        $this->connection->insert($this->groupsTable, [
+            'id' => 1,
+            'title' => 'First group',
+            'tags' => ',AlphaTag,BetaTag,'
+        ]);
+        $this->connection->insert($this->groupsTable, [
+            'id' => 2,
+            'title' => 'Second group',
+            'tags' => ',GammaTag,'
+        ]);
         $this->Manager = new Manager($this->Project);
+        $this->resetManagerCaches();
 
         foreach (['AlphaTag', 'BetaTag', 'GammaTag'] as $tag) {
             QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
@@ -71,6 +89,7 @@ class ManagerDatabaseTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->resetManagerCaches();
         foreach (['AlphaTag', 'BetaTag', 'GammaTag'] as $tag) {
             QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
         }
@@ -121,6 +140,25 @@ class ManagerDatabaseTest extends TestCase
         );
     }
 
+    public function testSearchesTagsAndResolvesSiteIdsAndGroups(): void
+    {
+        $searchResult = $this->Manager->searchTags('ta', [
+            'order' => 'title DESC',
+            'limit' => 1
+        ]);
+
+        self::assertCount(1, $searchResult);
+        self::assertSame('GammaTag', $searchResult[0]['tag']);
+        self::assertSame(
+            [11 => 2, 10 => 1, 12 => 1],
+            $this->Manager->getSiteIdsFromTags(['AlphaTag', 'BetaTag'])
+        );
+        self::assertSame(
+            [1],
+            array_map('intval', array_column($this->Manager->getGroupsFromTag('BetaTag'), 'id'))
+        );
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
@@ -142,6 +180,11 @@ class ManagerDatabaseTest extends TestCase
         $Sites->addColumn('id', 'integer');
         $Sites->addColumn('tags', 'text', ['notnull' => false]);
         $Sites->setPrimaryKey(['id']);
+        $Groups = $Schema->createTable($this->groupsTable);
+        $Groups->addColumn('id', 'integer');
+        $Groups->addColumn('title', 'string');
+        $Groups->addColumn('tags', 'text', ['notnull' => false]);
+        $Groups->setPrimaryKey(['id']);
 
         foreach ($Schema->toSql($this->connection->getDatabasePlatform()) as $statement) {
             $this->connection->executeStatement($statement);
@@ -165,5 +208,13 @@ class ManagerDatabaseTest extends TestCase
     {
         $QueryBuilder = new ReflectionProperty(QUI::class, 'QueryBuilder');
         $QueryBuilder->setValue(null, $Connection);
+    }
+
+    private function resetManagerCaches(): void
+    {
+        foreach (['siteIdsFromTagsCache', 'siteTagsCache'] as $propertyName) {
+            $Property = new ReflectionProperty(Manager::class, $propertyName);
+            $Property->setValue(null, []);
+        }
     }
 }
