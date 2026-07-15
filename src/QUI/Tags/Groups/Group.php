@@ -464,6 +464,7 @@ class Group
         );
 
         $this->parentId = $groupId;
+        Handler::clearTreeCache($this->Project);
     }
 
     /**
@@ -496,6 +497,7 @@ class Group
             );
 
             $this->parentId = null;
+            Handler::clearTreeCache($this->Project);
         } catch (QUI\Exception $exception) {
             QUI\System\Log::addError($exception->getMessage());
         }
@@ -553,6 +555,8 @@ class Group
                 'id' => $this->getId()
             ]
         );
+
+        Handler::clearTreeCache($this->Project);
     }
 
     /**

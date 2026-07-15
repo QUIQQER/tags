@@ -100,6 +100,7 @@ class Handler
         );
 
         $gid = $Connection->lastInsertId();
+        self::clearTreeCache($Project);
 
         return self::get($Project, (int)$gid);
     }
@@ -171,6 +172,16 @@ class Handler
         if (isset(self::$groups[$project][$lang][$groupId])) {
             unset(self::$groups[$project][$lang][$groupId]);
         }
+
+        self::clearTreeCache($Project);
+    }
+
+    /**
+     * Clear the request-local hierarchy cache for a project.
+     */
+    public static function clearTreeCache(Project $Project): void
+    {
+        unset(self::$trees[$Project->getName()][$Project->getLang()]);
     }
 
     /**
