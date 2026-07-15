@@ -36,7 +36,7 @@ class Site
     {
         $Project = $Site->getProject();
         $tags = $Site->getAttribute('quiqqer.tags.tagList');
-        $Manager = new QUI\Tags\Manager($Project);
+        $Manager = static::getManager($Project);
 
         // register path
         if (
@@ -88,7 +88,7 @@ class Site
 
         $Manager->setSiteTags($Site->getId(), $list);
 
-        self::setTagsToFulltextSearch($Site, $list);
+        static::setTagsToFulltextSearch($Site, $list);
     }
 
     /**
@@ -138,7 +138,7 @@ class Site
      */
     public static function onLoad(QUI\Interfaces\Projects\Site $Site): void
     {
-        $Manager = new QUI\Tags\Manager($Site->getProject());
+        $Manager = static::getManager($Site->getProject());
         $tags = $Manager->getSiteTags($Site->getId());
 
         $Site->setAttribute('quiqqer.tags.tagList', $tags);
@@ -152,7 +152,15 @@ class Site
      */
     public static function onDestroy(QUI\Interfaces\Projects\Site $Site): void
     {
-        $Manager = new QUI\Tags\Manager($Site->getProject());
+        $Manager = static::getManager($Site->getProject());
         $Manager->deleteSiteTags($Site->getId());
+    }
+
+    /**
+     * Create the tag manager used by site event handlers.
+     */
+    protected static function getManager(QUI\Projects\Project $Project): Manager
+    {
+        return new Manager($Project);
     }
 }
