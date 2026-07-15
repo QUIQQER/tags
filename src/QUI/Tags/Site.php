@@ -53,7 +53,7 @@ class Site
 
             $url = str_replace($defaultSuffix, '', $url);
 
-            QUI::getRewrite()->registerPath($url . '/*', $Site);
+            static::registerListingPath($url . '/*', $Site);
         }
 
         // set tags
@@ -162,5 +162,13 @@ class Site
     protected static function getManager(QUI\Projects\Project $Project): Manager
     {
         return new Manager($Project);
+    }
+
+    /**
+     * Register the wildcard path of an active tag listing site.
+     */
+    protected static function registerListingPath(string $path, QUI\Interfaces\Projects\Site $Site): void
+    {
+        QUI::getRewrite()->registerPath($path, $Site);
     }
 }

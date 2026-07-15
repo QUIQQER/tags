@@ -90,11 +90,55 @@ class SiteFlowTest extends TestCase
         SiteFlowTestProxy::onDestroy($Site);
     }
 
+    public function testDeactivatePersistsEmptyTagList(): void
+    {
+        $Project = $this->createMock(Project::class);
+        $Site = $this->createSite($Project, null);
+        $Manager = $this->createMock(Manager::class);
+        $Manager->expects(self::once())->method('setSiteTags')->with(42, []);
+        SiteFlowTestProxy::setManager($Manager);
+        $this->setTagLimit(1);
+
+        SiteFlowTestProxy::onSiteDeactivate($Site);
+
+        self::assertSame(['siteId' => 42, 'tags' => []], SiteFlowTestProxy::$fulltextCall);
+    }
+
+    public function testSaveRegistersWildcardPathForActiveTagListingSite(): void
+    {
+        $Project = $this->createMock(Project::class);
+        $Site = $this->createMock(QUI\Projects\Site::class);
+        $Site->method('getProject')->willReturn($Project);
+        $Site->method('getId')->willReturn(43);
+        $Site->method('getLocation')->willReturn('/phpunit-tag-listing.html');
+        $Site->method('getAttribute')->willReturnCallback(
+            static fn(string $name): mixed => match ($name) {
+                'quiqqer.tags.tagList' => ['AlphaTag'],
+                'type' => 'quiqqer/tags:types/tag-listing',
+                'active' => 1,
+                default => null
+            }
+        );
+        $Manager = $this->createMock(Manager::class);
+        $Manager->method('existsTag')->with('AlphaTag')->willReturn(true);
+        $Manager->expects(self::once())->method('setSiteTags')->with(43, ['AlphaTag']);
+        SiteFlowTestProxy::setManager($Manager);
+        $this->setTagLimit(1);
+
+        SiteFlowTestProxy::onSave($Site);
+
+        self::assertSame([
+            'path' => '/phpunit-tag-listing.html/*',
+            'siteId' => 43
+        ], SiteFlowTestProxy::$registeredPath);
+        self::assertSame(['siteId' => 43, 'tags' => ['AlphaTag']], SiteFlowTestProxy::$fulltextCall);
+    }
+
     /**
-     * @param string|list<string> $tags
+     * @param string|list<string>|null $tags
      * @return SiteInterface&MockObject
      */
-    private function createSite(Project $Project, string|array $tags): SiteInterface
+    private function createSite(Project $Project, string|array|null $tags): SiteInterface
     {
         $Site = $this->createMock(SiteInterface::class);
         $Site->method('getProject')->willReturn($Project);

@@ -16,6 +16,7 @@ use QUI\Permissions\Permission;
 use QUI\Projects\Project;
 use QUI\Projects\Site;
 use QUI\Projects\Site\Edit;
+use QUI\Tags\Controls\SiteTags;
 use QUI\Tags\Manager;
 use ReflectionProperty;
 
@@ -321,6 +322,88 @@ class ManagerDatabaseTest extends TestCase
         );
     }
 
+    public function testRejectsDuplicateTitlesAndMissingTagLookups(): void
+    {
+        try {
+            $this->Manager->add('Alpha', []);
+            self::fail('A duplicate tag title must be rejected.');
+        } catch (QUI\Tags\Exception) {
+            self::addToAssertionCount(1);
+        }
+
+        try {
+            $this->Manager->edit('BetaTag', ['title' => 'Alpha']);
+            self::fail('A duplicate edited title must be rejected.');
+        } catch (QUI\Tags\Exception) {
+            self::addToAssertionCount(1);
+        }
+
+        foreach (
+            [
+                fn() => $this->Manager->get('MissingTag'),
+                fn() => $this->Manager->getByTitle('Missing title'),
+                fn() => $this->Manager->getByGenerator('missing-generator')
+            ] as $lookup
+        ) {
+            try {
+                $lookup();
+                self::fail('A missing tag lookup must throw.');
+            } catch (QUI\Tags\Exception) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testCreatesUniqueIdentifierForExistingNormalizedTag(): void
+    {
+        $tag = $this->Manager->add('Alpha Tag', ['title' => 'Unique PHPUnit title']);
+
+        self::assertSame('AlphaTag1', $tag);
+        self::assertTrue($this->Manager->existsTag($tag));
+    }
+
+    public function testRendersAssignedSiteTags(): void
+    {
+        $this->Sites[20] = $this->createSite(20);
+        $this->Manager->setSiteTags(20, ['AlphaTag', 'BetaTag']);
+        $Control = new SiteTags(['Site' => $this->Sites[20]]);
+
+        self::assertNotSame('', $Control->getBody());
+    }
+
+    public function testHandlesMissingTagsAndNoOpSiteAssignmentChanges(): void
+    {
+        self::assertSame([], $this->Manager->getRelationTags([]));
+        self::assertSame(['MissingTag'], $this->Manager->getRelationTags(['Missing tag']));
+        self::assertSame([], $this->Manager->getSiteIdsFromTags(['MissingTag']));
+
+        $this->Manager->deleteTag('Missing tag');
+        $this->Sites[20] = $this->createSite(20);
+        $this->Manager->setSiteTags(20, ['AlphaTag']);
+        $this->Manager->addTagToSite(20, 'MissingTag');
+        $this->Manager->addTagToSite(20, 'AlphaTag');
+        $this->Manager->removeTagFromSite(20, 'MissingTag');
+
+        self::assertSame(['AlphaTag'], $this->Manager->getSiteTags(20));
+
+        $this->Manager->addTagToSite(20, 'BetaTag');
+
+        self::assertSame(['AlphaTag', 'BetaTag'], $this->Manager->getSiteTags(20));
+        self::assertNotEmpty($this->Manager->searchTags('tag', [
+            'order' => 'invalid DESC',
+            'limit' => 'invalid'
+        ]));
+    }
+
+    public function testCountReturnsZeroWhenProjectTagTableIsUnavailable(): void
+    {
+        $Project = $this->createMock(Project::class);
+        $Project->method('getName')->willReturn('missingtagsphpunit');
+        $Project->method('getLang')->willReturn('en');
+
+        self::assertSame(0, (new Manager($Project))->count());
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
@@ -380,6 +463,7 @@ class ManagerDatabaseTest extends TestCase
     {
         $Site = $this->createMock(Site::class);
         $Site->method('getId')->willReturn($siteId);
+        $Site->method('getProject')->willReturn($this->Project);
 
         return $Site;
     }

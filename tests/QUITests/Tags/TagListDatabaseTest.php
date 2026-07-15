@@ -20,6 +20,7 @@ class TagListDatabaseTest extends TestCase
     private Connection $originalConnection;
     private Connection $connection;
     private TagList $TagList;
+    private Project $Project;
 
     protected function setUp(): void
     {
@@ -34,9 +35,13 @@ class TagListDatabaseTest extends TestCase
         $this->resetHandlerCaches();
 
         $Project = $this->createMock(Project::class);
+        $this->Project = $Project;
         $Project->method('getName')->willReturn('tagsphpunit');
         $Project->method('getLang')->willReturn('en');
         $Site = $this->createMock(Site::class);
+        $Project->method('getConfig')->willReturn(false);
+        $Project->method('getSites')->willReturn([['id' => 77]]);
+        $Project->method('get')->with(77)->willReturn($Site);
         $table = QUI::getDBProjectTableName('tags', $Project);
         $Schema = new Schema();
         $Tags = $Schema->createTable($table);
@@ -144,6 +149,28 @@ class TagListDatabaseTest extends TestCase
     public function testRendersTagListTemplate(): void
     {
         self::assertNotSame('', $this->TagList->getBody());
+    }
+
+    public function testRendersWithProjectTagListingSiteFallback(): void
+    {
+        $TagList = new TagList(['Project' => $this->Project]);
+
+        self::assertNotSame('', $TagList->getBody());
+    }
+
+    public function testRenderingFailsWithoutTagListingSite(): void
+    {
+        $Project = $this->createMock(Project::class);
+        $Project->method('getName')->willReturn('tagsphpunit');
+        $Project->method('getLang')->willReturn('en');
+        $Project->method('getConfig')->willReturn(false);
+        $Project->method('getSites')->willReturn([]);
+        $TagList = new TagList(['Project' => $Project]);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('No tag listing site found');
+
+        $TagList->getBody();
     }
 
     private function setConnection(Connection $Connection): void

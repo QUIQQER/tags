@@ -12,6 +12,7 @@ use QUI;
 use QUI\Interfaces\Users\User;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
+use QUI\Projects\Media;
 use QUI\Tags\Controls\TagMenu;
 use QUI\Tags\Controls\TagSelect;
 use QUI\Tags\Groups\Group;
@@ -44,6 +45,9 @@ class GroupsHandlerDatabaseTest extends TestCase
         $this->Project = $this->createMock(Project::class);
         $this->Project->method('getName')->willReturn('tagsphpunit');
         $this->Project->method('getLang')->willReturn('en');
+        $Media = $this->createMock(Media::class);
+        $Media->method('getPlaceholderImage')->willReturn(null);
+        $this->Project->method('getMedia')->willReturn($Media);
         $this->table = Handler::table($this->Project);
         $this->tagsTable = QUI::getDBProjectTableName('tags', $this->Project);
         $this->createTables();
@@ -271,6 +275,35 @@ class GroupsHandlerDatabaseTest extends TestCase
         self::assertSame(['red'], $Select->getAttribute('selectedTags'));
         self::assertNotSame('', $Menu->getBody());
         self::assertNotSame('', $Select->getBody());
+    }
+
+    public function testHandlesEmptyMetadataImageAndInvalidParentBranches(): void
+    {
+        $Group = new Group(3, $this->Project);
+        $Group->setTitle(null);
+        $Group->setWorkingTitle(null);
+        $Group->setDescription(null);
+        $Group->setGenerator(null);
+        $Group->setGenerateStatus(false);
+        $Group->setImage(null);
+        $Group->addTag('');
+        $Group->removeTag('MissingTag');
+        $Group->removeParentGroup();
+
+        self::assertFalse($Group->isGenerated());
+        self::assertFalse($Group->getImage());
+
+        $this->expectException(QUI\Tags\Exception::class);
+        $Group->setParentGroup(6);
+    }
+
+    public function testRejectsInvalidGroupImageUrl(): void
+    {
+        $Group = new Group(1, $this->Project);
+
+        $this->expectException(QUI\Exception::class);
+
+        $Group->setImage('invalid-phpunit-media-url');
     }
 
     private function createTables(): void
