@@ -1041,23 +1041,26 @@ class Manager
             }
         }
 
-        // entry exists?
-        $result = QUI::getDataBase()->fetch([
-            'from' => $table,
-            'where' => [
-                'id' => $siteId
-            ],
-            'limit' => 1
-        ]);
+        $Connection = QUI::getDataBaseConnection();
 
-        if (!isset($result[0])) {
-            QUI::getDataBase()->insert($table, [
+        // entry exists?
+        $exists = $Connection->createQueryBuilder()
+            ->select(Doctrine::quoteIdentifier('id'))
+            ->from(Doctrine::quoteIdentifier($table))
+            ->where(Doctrine::quoteIdentifier('id') . ' = :siteId')
+            ->setParameter('siteId', $siteId)
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne();
+
+        if ($exists === false) {
+            $Connection->insert(Doctrine::quoteIdentifier($table), [
                 'id' => $siteId
             ]);
         }
 
-        QUI::getDataBase()->update(
-            $table,
+        $Connection->update(
+            Doctrine::quoteIdentifier($table),
             ['tags' => ',' . implode(',', $list) . ','],
             ['id' => $siteId]
         );
@@ -1076,16 +1079,20 @@ class Manager
 
         // update cache of tags
         foreach ($list as $tag) {
-            $result = QUI::getDataBase()->fetch([
-                'from' => $tableTagCache,
-                'where' => [
-                    'tag' => $tag
-                ],
-                'limit' => 1
-            ]);
+            $result = $Connection->createQueryBuilder()
+                ->select(
+                    Doctrine::quoteIdentifier('sites'),
+                    Doctrine::quoteIdentifier('count')
+                )
+                ->from(Doctrine::quoteIdentifier($tableTagCache))
+                ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+                ->setParameter('tag', $tag)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchAssociative();
 
-            if (empty($result)) {
-                QUI::getDataBase()->insert($tableTagCache, [
+            if ($result === false) {
+                $Connection->insert(Doctrine::quoteIdentifier($tableTagCache), [
                     'tag' => $tag,
                     'sites' => ',' . $siteId . ',',
                     'count' => 1
@@ -1094,7 +1101,7 @@ class Manager
                 continue;
             }
 
-            $siteIds = trim($result[0]['sites'], ',');
+            $siteIds = trim($result['sites'] ?? '', ',');
 
             if (empty($siteIds)) {
                 $siteIds = [];
@@ -1108,12 +1115,14 @@ class Manager
 
             $siteIds[] = $siteId;
 
-            QUI::getDataBase()->update($tableTagCache, [
-                'sites' => ',' . implode(',', $siteIds) . ',',
-                'count' => count($siteIds)
-            ], [
-                'tag' => $tag
-            ]);
+            $Connection->update(
+                Doctrine::quoteIdentifier($tableTagCache),
+                [
+                    'sites' => ',' . implode(',', $siteIds) . ',',
+                    'count' => count($siteIds)
+                ],
+                ['tag' => $tag]
+            );
         }
     }
 
@@ -1141,27 +1150,30 @@ class Manager
             }
         }
 
+        $Connection = QUI::getDataBaseConnection();
+
         // update cache of tags
         foreach ($list as $tag) {
             try {
-                $result = QUI::getDataBase()->fetch([
-                    'from' => $tableTagCache,
-                    'where' => [
-                        'tag' => $tag
-                    ],
-                    'limit' => 1
-                ]);
-            } catch (QUI\Exception $Exception) {
+                $result = $Connection->createQueryBuilder()
+                    ->select(Doctrine::quoteIdentifier('sites'))
+                    ->from(Doctrine::quoteIdentifier($tableTagCache))
+                    ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+                    ->setParameter('tag', $tag)
+                    ->setMaxResults(1)
+                    ->executeQuery()
+                    ->fetchAssociative();
+            } catch (\Exception $Exception) {
                 QUI\System\Log::addError($Exception->getMessage());
 
                 continue;
             }
 
-            if (empty($result)) {
+            if ($result === false) {
                 continue;
             }
 
-            $siteIds = trim($result[0]['sites'], ',');
+            $siteIds = trim($result['sites'] ?? '', ',');
 
             if (empty($siteIds)) {
                 continue;
@@ -1179,13 +1191,15 @@ class Manager
             $siteIds = array_values($siteIds);
 
             try {
-                QUI::getDataBase()->update($tableTagCache, [
-                    'sites' => ',' . implode(',', $siteIds) . ',',
-                    'count' => count($siteIds)
-                ], [
-                    'tag' => $tag
-                ]);
-            } catch (QUI\Exception $Exception) {
+                $Connection->update(
+                    Doctrine::quoteIdentifier($tableTagCache),
+                    [
+                        'sites' => ',' . implode(',', $siteIds) . ',',
+                        'count' => count($siteIds)
+                    ],
+                    ['tag' => $tag]
+                );
+            } catch (\Exception $Exception) {
                 QUI\System\Log::addError($Exception->getMessage());
             }
         }

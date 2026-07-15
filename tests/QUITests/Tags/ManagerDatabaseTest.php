@@ -182,6 +182,25 @@ class ManagerDatabaseTest extends TestCase
             ->fetchOne());
     }
 
+    public function testRemovesSiteFromTagCache(): void
+    {
+        $this->Manager->removeSiteFromTags(11, ['AlphaTag', 'BetaTag', 'MissingTag']);
+
+        $cacheRows = $this->connection->createQueryBuilder()
+            ->select('tag', 'sites', 'count')
+            ->from($this->cacheTable)
+            ->where('tag IN (:tags)')
+            ->setParameter('tags', ['AlphaTag', 'BetaTag'], \Doctrine\DBAL\ArrayParameterType::STRING)
+            ->orderBy('tag')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        self::assertSame([
+            ['tag' => 'AlphaTag', 'sites' => ',10,', 'count' => 1],
+            ['tag' => 'BetaTag', 'sites' => ',12,', 'count' => 1]
+        ], $cacheRows);
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();
