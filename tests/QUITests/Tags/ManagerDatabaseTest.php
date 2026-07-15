@@ -159,6 +159,29 @@ class ManagerDatabaseTest extends TestCase
         );
     }
 
+    public function testReadsCountsAndDeletesSiteTags(): void
+    {
+        $this->connection->insert($this->sitesTable, [
+            'id' => 12,
+            'tags' => ',,AlphaTag,,BetaTag,,'
+        ]);
+
+        self::assertSame(['AlphaTag', 'BetaTag'], $this->Manager->getSiteTags(12));
+        self::assertSame(2, $this->Manager->getTagCount('AlphaTag'));
+        self::assertSame(0, $this->Manager->getTagCount('MissingTag'));
+
+        $this->Manager->deleteSiteTags(12);
+
+        self::assertSame([], $this->Manager->getSiteTags(12));
+        self::assertFalse($this->connection->createQueryBuilder()
+            ->select('id')
+            ->from($this->sitesTable)
+            ->where('id = :id')
+            ->setParameter('id', 12)
+            ->executeQuery()
+            ->fetchOne());
+    }
+
     private function createTables(): void
     {
         $Schema = new Schema();

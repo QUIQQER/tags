@@ -1207,10 +1207,11 @@ class Manager
         $this->clearSiteIdsFromTagsRequestCache();
 
         try {
-            QUI::getDataBase()->delete($table, [
-                'id' => $siteId
-            ]);
-        } catch (QUI\Exception $Exception) {
+            QUI::getDataBaseConnection()->delete(
+                Doctrine::quoteIdentifier($table),
+                ['id' => (int)$siteId]
+            );
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
         }
     }
@@ -1231,26 +1232,27 @@ class Manager
         }
 
         try {
-            $result = QUI::getDataBase()->fetch([
-                'from' => QUI::getDBProjectTableName('tags_sites', $this->Project),
-                'where' => [
-                    'id' => $siteId
-                ],
-                'limit' => 1
-            ]);
-        } catch (QUI\Exception $Exception) {
+            $result = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('tags'))
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_sites', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('id') . ' = :siteId')
+                ->setParameter('siteId', $siteId)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchAssociative();
+        } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
 
             return [];
         }
 
-        if (!isset($result[0])) {
+        if ($result === false) {
             self::$siteTagsCache[$cacheKey] = [];
 
             return [];
         }
 
-        $tags = str_replace(',,', ',', $result[0]['tags']);
+        $tags = str_replace(',,', ',', $result['tags'] ?? '');
         $tags = trim($tags, ',');
         self::$siteTagsCache[$cacheKey] = empty($tags) ? [] : explode(',', $tags);
 
@@ -1266,25 +1268,25 @@ class Manager
     public function getTagCount(string $tag): int
     {
         try {
-            $result = QUI::getDatabase()->fetch([
-                'select' => [
-                    'count'
-                ],
-                'from' => QUI::getDBProjectTableName('tags_cache', $this->Project),
-                'where' => [
-                    'tag' => $tag
-                ]
-            ]);
-        } catch (QUI\Exception $exception) {
-            QUI\System\Log::addError($exception->getMessage());
+            $count = QUI::getDataBaseConnection()->createQueryBuilder()
+                ->select(Doctrine::quoteIdentifier('count'))
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_cache', $this->Project)))
+                ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+                ->setParameter('tag', $tag)
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchOne();
+        } catch (\Exception $Exception) {
+            QUI\System\Log::addError($Exception->getMessage());
+
             return 0;
         }
 
-        if (empty($result)) {
+        if ($count === false) {
             return 0;
         }
 
-        return $result[0]['count'];
+        return (int)$count;
     }
 
     /**
