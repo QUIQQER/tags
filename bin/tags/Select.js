@@ -305,8 +305,12 @@ define('package/quiqqer/tags/bin/tags/Select', [
                     projectName: this.$Project.getName(),
                     projectLang: this.$Project.getLang(),
                     tag        : tag,
+                    tagParams  : JSON.encode({}),
                     showError  : false,
-                    onError    : reject
+                    onError    : () => {
+                        this.Loader.hide();
+                        reject();
+                    }
                 });
             });
         },
@@ -358,7 +362,7 @@ define('package/quiqqer/tags/bin/tags/Select', [
                 events: {
                     onClick: function () {
                         self.createTag(tag).then(function (created) {
-                            return self.addTag(created.tag);
+                            self.addItem(created.tag);
                         }).then(function () {
                             hide();
                         }).catch(hide);
