@@ -305,8 +305,12 @@ define('package/quiqqer/tags/bin/tags/Select', [
                     projectName: this.$Project.getName(),
                     projectLang: this.$Project.getLang(),
                     tag        : tag,
+                    tagParams  : JSON.encode({}),
                     showError  : false,
-                    onError    : reject
+                    onError    : () => {
+                        this.Loader.hide();
+                        reject();
+                    }
                 });
             });
         },
