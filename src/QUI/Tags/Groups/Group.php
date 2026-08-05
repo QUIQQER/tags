@@ -539,22 +539,33 @@ class Group
         $tags = array_values(array_unique($tags));
 
         // database
-        QUI::getDataBaseConnection()->update(
-            Doctrine::quoteIdentifier(Handler::table($this->Project)),
-            [
-                'title' => $this->getTitle(),
-                'workingtitle' => $this->getWorkingTitle(),
-                'desc' => $this->getDescription(),
-                'image' => $image,
-                'priority' => $this->getPriority(),
-                'tags' => ',' . implode(',', $tags) . ',',
-                'generated' => $this->isGenerated() ? 1 : 0,
-                'generator' => $this->getGenerator()
-            ],
-            [
-                'id' => $this->getId()
-            ]
-        );
+        $data = [
+            'title' => $this->getTitle(),
+            'workingtitle' => $this->getWorkingTitle(),
+            'desc' => $this->getDescription(),
+            'image' => $image,
+            'priority' => $this->getPriority(),
+            'tags' => ',' . implode(',', $tags) . ',',
+            'generated' => $this->isGenerated() ? 1 : 0,
+            'generator' => $this->getGenerator()
+        ];
+
+        $queryBuilder = QUI::getDataBaseConnection()
+            ->createQueryBuilder()
+            ->update(Doctrine::quoteIdentifier(Handler::table($this->Project)));
+
+        foreach ($data as $field => $value) {
+            $parameter = 'update_' . $field;
+
+            $queryBuilder
+                ->set(Doctrine::quoteIdentifier($field), ':' . $parameter)
+                ->setParameter($parameter, $value);
+        }
+
+        $queryBuilder
+            ->where(Doctrine::quoteIdentifier('id') . ' = :id')
+            ->setParameter('id', $this->getId())
+            ->executeStatement();
 
         Handler::clearTreeCache($this->Project);
     }
