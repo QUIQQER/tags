@@ -380,11 +380,22 @@ class Manager
             }
         }
 
-        QUI::getDataBaseConnection()->update(
-            $table,
-            $tagParams,
-            ['tag' => $tag]
-        );
+        $queryBuilder = QUI::getDataBaseConnection()
+            ->createQueryBuilder()
+            ->update($table);
+
+        foreach ($tagParams as $field => $value) {
+            $parameter = 'update_' . $field;
+
+            $queryBuilder
+                ->set(Doctrine::quoteIdentifier($field), ':' . $parameter)
+                ->setParameter($parameter, $value);
+        }
+
+        $queryBuilder
+            ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
+            ->setParameter('tag', $tag)
+            ->executeStatement();
 
         if (isset($params['tagGroupIds'])) {
             $currentTagGroupIds = TagGroupsHandler::getGroupIdsByTag($this->Project, $tag);
