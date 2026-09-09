@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<locales>
+    <groups name="quiqqer/tags" datatype="js">
+
+        <locale name="control.tagcontainer.sheet.btn.add">
+<pt><![CDATA[Adicionar]]></pt>
+        </locale>
+
+        <locale name="panel.delete.window.message">
+<pt><![CDATA[<p>Queres mesmo eliminar a seguinte etiqueta?</p><p><strong>[tags]</strong></p>]]></pt>
+        </locale>
+        <locale name="panel.delete.window.title">
+<pt><![CDATA[Eliminar etiqueta]]></pt>
+        </locale>
+        <locale name="panel.manager.tag.title">
+<pt><![CDATA[Título da etiqueta]]></pt>
+        </locale>
+        <locale name="panel.manager.tag.count">
+<pt><![CDATA[Número de páginas]]></pt>
+        </locale>
+        <locale name="panel.manager.tag.groups">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="panel.add.window.title">
+<pt><![CDATA[Adicionar etiqueta]]></pt>
+        </locale>
+        <locale name="panel.add.window.error.title.empty">
+<pt><![CDATA[Introduz um título.]]></pt>
+        </locale>
+        <locale name="panel.add.window.shortcuts.label">
+<pt><![CDATA[Atalhos de teclado]]></pt>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save">
+<pt><![CDATA[Guardar]]></pt>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save.description">
+<pt><![CDATA[Guardar (na descrição)]]></pt>
+        </locale>
+        <locale name="panel.add.window.keepOpen">
+<pt><![CDATA[Manter a janela aberta para criar várias etiquetas]]></pt>
+        </locale>
+        <locale name="panel.add.window.keepOpen.group">
+<pt><![CDATA[Manter a janela aberta para criar vários grupos]]></pt>
+        </locale>
+        <locale name="site.window.add.tag.title" html="true">
+<pt><![CDATA[<p>A etiqueta <strong>[tag]</strong> ainda não existe. Queres adicioná-la?</p>]]></pt>
+        </locale>
+        <locale name="site.table.description">
+<pt><![CDATA[Clica no campo de etiquetas para adicionar etiquetas à página.]]></pt>
+        </locale>
+        <locale name="site.table.title">
+<pt><![CDATA[Etiquetas atribuídas à página]]></pt>
+        </locale>
+        <locale name="site.table.groups.title">
+<pt><![CDATA[Grupos de etiquetas atribuídos à página]]></pt>
+        </locale>
+        <locale name="control.tagcontainer.window.add.title">
+<pt><![CDATA[Adicionar etiqueta]]></pt>
+        </locale>
+        <locale name="control.tagcontainer.window.message.no.tags">
+<pt><![CDATA[Não foram encontradas etiquetas]]></pt>
+        </locale>
+        <locale name="control.tagcontainer.sheet.btn.cancel">
+<pt><![CDATA[Cancelar]]></pt>
+        </locale>
+        <locale name="panel.manager.button.add.tag">
+<pt><![CDATA[Adicionar etiqueta]]></pt>
+        </locale>
+        <locale name="panel.manager.button.delete.tag">
+<pt><![CDATA[Eliminar as etiquetas selecionadas]]></pt>
+        </locale>
+        <locale name="panel.manager.image.tag">
+<pt><![CDATA[Imagem da etiqueta]]></pt>
+        </locale>
+        <locale name="panel.manager.title">
+<pt><![CDATA[Gestão de etiquetas]]></pt>
+        </locale>
+        <locale name="control.tags.search.category.no.tags">
+<pt><![CDATA[Não contém etiquetas]]></pt>
+        </locale>
+        <locale name="panel.showtagsites.title">
+<pt><![CDATA[Páginas com a etiqueta «[tag]»]]></pt>
+        </locale>
+
+        <locale name="controls.panel.window.tagGroups">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+
+<!-- Control: TagSites -->
+        <locale name="controls.sites.table.btns.opensitepanel">
+<pt><![CDATA[Abrir o painel da página]]></pt>
+        </locale>
+        <locale name="controls.sites.table.column.id">
+<pt><![CDATA[ID da página]]></pt>
+        </locale>
+        <locale name="controls.sites.table.column.title">
+<pt><![CDATA[Título da página]]></pt>
+        </locale>
+        <locale name="controls.sites.table.column.url">
+<pt><![CDATA[URL]]></pt>
+        </locale>
+        <locale name="panel.manager.button.showtagsites">
+<pt><![CDATA[Mostrar as páginas com esta etiqueta]]></pt>
+        </locale>
+
+        <locale name="tag.groups.grid.generate">
+<pt><![CDATA[Gerado]]></pt>
+        </locale>
+
+<!-- Control: TagSites -->
+        <locale name="tag.groups.panel.title">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="tag.groups.panel.template.parent">
+<pt><![CDATA[Grupo de etiquetas superior]]></pt>
+        </locale>
+
+        <locale name="tag.groups.window.create.title">
+<pt><![CDATA[Criar grupo de etiquetas]]></pt>
+        </locale>
+        <locale name="tag.groups.window.delete.title">
+<pt><![CDATA[Eliminar grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="tag.groups.window.delete.info" html="true">
+<pt><![CDATA[Queres mesmo eliminar de forma irreversível os seguintes grupos de etiquetas?<br><br>[groups]]]></pt>
+        </locale>
+
+        <locale name="tag.groups.group.title">
+<pt><![CDATA[Grupo de etiquetas: [group] (#[id])]]></pt>
+        </locale>
+        <locale name="control.tags.group.tagCategory">
+<pt><![CDATA[Etiquetas atribuídas]]></pt>
+        </locale>
+        <locale name="controls.groups.map.category.all">
+<pt><![CDATA[Todos os grupos de etiquetas]]></pt>
+        </locale>
+
+        <locale name="control.tags.search.window.title">
+<pt><![CDATA[Pesquisa por etiquetas]]></pt>
+        </locale>
+
+        <locale name="control.grouptags.search.window.title">
+<pt><![CDATA[Pesquisar grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="control.grouptags.search.window.info">
+<pt><![CDATA[Seleciona um grupo de etiquetas.]]></pt>
+        </locale>
+        <locale name="control.grouptags.search.window.info.multiselect" html="true">
+<pt><![CDATA[Seleciona um ou mais grupos de etiquetas.<br><i>(Seleção múltipla com Ctrl + clique)</i>]]></pt>
+        </locale>
+
+        <locale name="message.limit.tags.to.site">
+<pt><![CDATA[Não podes adicionar mais de [amount] etiquetas a esta página. Remove algumas para adicionar outras.]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.title">
+<pt><![CDATA[Pesquisa por etiquetas]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.all.tags">
+<pt><![CDATA[Todas as etiquetas]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.suggest">
+<pt><![CDATA[Etiquetas sugeridas]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.selected">
+<pt><![CDATA[Etiquetas selecionadas]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.selected.button.count">
+<pt><![CDATA[Aplicar ([count])]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.selected.button">
+<pt><![CDATA[Aplicar]]></pt>
+        </locale>
+        <locale name="quiqqer.tags.select.placeholder">
+<pt><![CDATA[Pesquisar uma etiqueta…]]></pt>
+        </locale>
+    </groups>
+    <groups name="quiqqer/tags" datatype="php,js">
+        <locale name="package.title">
+<pt><![CDATA[QUIQQER: etiquetas]]></pt>
+        </locale>
+        <locale name="package.description" html="true">
+<pt><![CDATA[Este pacote acrescenta a gestão de etiquetas ao QUIQQER.]]></pt>
+        </locale>
+
+        <locale name="permission.tags._header">
+<pt><![CDATA[Gestão de etiquetas]]></pt>
+        </locale>
+        <locale name="permission.tag._header">
+<pt><![CDATA[Gestão de etiquetas]]></pt>
+        </locale>
+        <locale name="permission.tags.mcp">
+<pt><![CDATA[Pode gerir etiquetas e grupos de etiquetas através do servidor MCP (IA).]]></pt>
+        </locale>
+        <locale name="permission.tags.siteLimit">
+<pt><![CDATA[Número de etiquetas que o utilizador pode adicionar a uma página.]]></pt>
+        </locale>
+        <locale name="permission.tag.siteLimit">
+<pt><![CDATA[Número de etiquetas que o utilizador pode adicionar a uma página.]]></pt>
+        </locale>
+        <locale name="permission.tags.delete">
+<pt><![CDATA[Pode eliminar etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tag.delete">
+<pt><![CDATA[Pode eliminar etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tags.create">
+<pt><![CDATA[Pode criar e editar etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tag.create">
+<pt><![CDATA[Pode criar e editar etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tags.group._header">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="permission.tag.group._header">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="permission.tags.group.create">
+<pt><![CDATA[Pode criar grupos de etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tag.group.create">
+<pt><![CDATA[Pode criar grupos de etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tags.group.delete">
+<pt><![CDATA[Pode eliminar grupos de etiquetas.]]></pt>
+        </locale>
+        <locale name="permission.tag.group.delete">
+<pt><![CDATA[Pode eliminar grupos de etiquetas.]]></pt>
+        </locale>
+
+<!-- Settings -->
+        <locale name="menu.tag.settings.title">
+<pt><![CDATA[Etiquetas]]></pt>
+        </locale>
+        <locale name="window.tag.settings.title">
+<pt><![CDATA[Definições das etiquetas]]></pt>
+        </locale>
+        <locale name="settings.window.tags.useGroups">
+<pt><![CDATA[Utilizar grupos de etiquetas]]></pt>
+        </locale>
+        <locale name="settings.window.tags.getTagsRecursive.text">
+<pt><![CDATA[Mostrar também as etiquetas dos subgrupos]]></pt>
+        </locale>
+        <locale name="settings.window.tags.getTagsRecursive.description">
+<pt><![CDATA[Ao selecionar um grupo para filtrar uma lista de etiquetas, serão também apresentadas todas as etiquetas dos seus subgrupos e dos subgrupos destes, até ao nível mais baixo.]]></pt>
+        </locale>
+
+        <locale name="exception.limit.tags.to.site">
+<pt><![CDATA[Só podes adicionar [limit] etiquetas à página. As etiquetas não foram adicionadas.]]></pt>
+        </locale>
+        <locale name="exception.tag.title.exist">
+<pt><![CDATA[Já existe uma etiqueta com o mesmo título.]]></pt>
+        </locale>
+        <locale name="exception.tag.already.exists">
+<pt><![CDATA[A etiqueta já existe.]]></pt>
+        </locale>
+        <locale name="exception.tag.not.found">
+<pt><![CDATA[A etiqueta não foi encontrada.]]></pt>
+        </locale>
+        <locale name="tag.control.placeholder.limit">
+<pt><![CDATA[Não é possível adicionar mais etiquetas: foi atingido o número máximo permitido.]]></pt>
+        </locale>
+        <locale name="tag.control.placeholder.addtag">
+<pt><![CDATA[Introduz aqui a etiqueta que pretendes adicionar…]]></pt>
+        </locale>
+        <locale name="tag.control.placeholder.addgroup">
+<pt><![CDATA[Introduz aqui o grupo de etiquetas que pretendes adicionar…]]></pt>
+        </locale>
+        <locale name="tag">
+<pt><![CDATA[Etiqueta]]></pt>
+        </locale>
+        <locale name="message.no.tags.found">
+<pt><![CDATA[Não foram encontradas etiquetas.]]></pt>
+        </locale>
+        <locale name="message.no.tag.groups.found">
+<pt><![CDATA[Não foram encontrados grupos de etiquetas.]]></pt>
+        </locale>
+        <locale name="message.no.permission.create.tags">
+<pt><![CDATA[Não tens permissão para criar etiquetas. Utiliza as que já existem.]]></pt>
+        </locale>
+
+        <locale name="project.settings.title">
+<pt><![CDATA[Etiquetas]]></pt>
+        </locale>
+        <locale name="project.settings.tagSearchId.title">
+<pt><![CDATA[Pesquisa por etiquetas predefinida]]></pt>
+        </locale>
+
+        <locale name="filter.abc">
+<pt><![CDATA[A B C]]></pt>
+        </locale>
+        <locale name="filter.def">
+<pt><![CDATA[D E F]]></pt>
+        </locale>
+        <locale name="filter.ghi">
+<pt><![CDATA[G H I]]></pt>
+        </locale>
+        <locale name="filter.jkl">
+<pt><![CDATA[J K L]]></pt>
+        </locale>
+        <locale name="filter.mno">
+<pt><![CDATA[M N O]]></pt>
+        </locale>
+        <locale name="filter.pqr">
+<pt><![CDATA[P Q R]]></pt>
+        </locale>
+        <locale name="filter.stu">
+<pt><![CDATA[S T U]]></pt>
+        </locale>
+        <locale name="filter.vz">
+<pt><![CDATA[V - Z]]></pt>
+        </locale>
+        <locale name="filter.123">
+<pt><![CDATA[0 - 9]]></pt>
+        </locale>
+        <locale name="filter.special">
+<pt><![CDATA[Caracteres especiais]]></pt>
+        </locale>
+        <locale name="filter.all">
+<pt><![CDATA[Todas]]></pt>
+        </locale>
+        <locale name="filter.groups.all">
+<pt><![CDATA[Todos os grupos]]></pt>
+        </locale>
+
+        <locale name="bricks.tags.title">
+<pt><![CDATA[Etiquetas: lista]]></pt>
+        </locale>
+        <locale name="bricks.tags.description">
+<pt><![CDATA[]]></pt>
+        </locale>
+
+        <locale name="quiqqer/tags:types/tag-listing.title">
+<pt><![CDATA[Lista de etiquetas]]></pt>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-listing.description" html="true">
+<pt><![CDATA[Este tipo de página apresenta uma lista de todas as etiquetas, com a descrição e o ícone. Ao clicar numa etiqueta, o utilizador acede a uma página de resultados com todas as páginas às quais essa etiqueta está atribuída.]]></pt>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-search.title">
+<pt><![CDATA[Pesquisa por etiquetas]]></pt>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-search.description" html="true">
+<pt><![CDATA[A pesquisa por etiquetas permite encontrar conteúdos sobre vários temas sem introduzir termos de pesquisa. O administrador pode atribuir esses temas como etiquetas a cada página. O utilizador pode pesquisar com uma ou várias etiquetas para limitar os resultados. A lista de resultados apresenta as páginas marcadas internamente com as etiquetas procuradas. O administrador pode configurar a pesquisa, por exemplo, para pré-selecionar etiquetas ou ajustar a apresentação.]]></pt>
+        </locale>
+
+        <locale name="cron.createCache.title">
+<pt><![CDATA[Criar cache de etiquetas]]></pt>
+        </locale>
+        <locale name="cron.createCache.description">
+<pt><![CDATA[Cria a tabela de cache de todas as etiquetas e grupos de etiquetas.]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.groupLabel">
+<pt><![CDATA[Agrupamento]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.tagLabel">
+<pt><![CDATA[Seleciona:]]></pt>
+        </locale>
+        <locale name="window.tag.group.search.selectLabel">
+<pt><![CDATA[Seleção:]]></pt>
+        </locale>
+        <locale name="window.tag.no.tags.selected">
+<pt><![CDATA[Ainda não há etiquetas selecionadas]]></pt>
+        </locale>
+        <locale name="window.tag.no.tags.selectedTags">
+<pt><![CDATA[Etiquetas selecionadas]]></pt>
+        </locale>
+    </groups>
+    <groups name="quiqqer/tags" datatype="php">
+<!-- Ajax -->
+        <locale name="message.ajax.groups.delete.error" html="true">
+<pt><![CDATA[Ocorreu um erro ao eliminar os grupos de etiquetas:<br><br>[error]]]></pt>
+        </locale>
+        <locale name="message.ajax.groups.delete.success">
+<pt><![CDATA[Os grupos de etiquetas foram eliminados.]]></pt>
+        </locale>
+        <locale name="message.group.save.error" html="true">
+<pt><![CDATA[Ocorreu um erro ao guardar o grupo de etiquetas #[tagGroupId]:<br><br>[error]]]></pt>
+        </locale>
+
+        <locale name="site.panel.category.title">
+<pt><![CDATA[Etiquetas]]></pt>
+        </locale>
+        <locale name="admin.types.tag.search.desc">
+<pt><![CDATA[QUIQQER: pesquisa por etiquetas]]></pt>
+        </locale>
+        <locale name="admin.types.tag.search">
+<pt><![CDATA[QUIQQER: pesquisa por etiquetas]]></pt>
+        </locale>
+        <locale name="admin.types.tag.desc">
+<pt><![CDATA[QUIQQER: etiqueta individual]]></pt>
+        </locale>
+        <locale name="admin.types.tag.listing">
+<pt><![CDATA[QUIQQER: lista de etiquetas]]></pt>
+        </locale>
+        <locale name="admin.types.tag.listing.desc">
+<pt><![CDATA[]]></pt>
+        </locale>
+        <locale name="admin.types.tag">
+<pt><![CDATA[QUIQQER: etiqueta individual]]></pt>
+        </locale>
+        <locale name="menu.tags">
+<pt><![CDATA[Etiquetas]]></pt>
+        </locale>
+        <locale name="menu.tags.manager">
+<pt><![CDATA[Gestão de etiquetas]]></pt>
+        </locale>
+        <locale name="menu.tags.groups">
+<pt><![CDATA[Grupos de etiquetas]]></pt>
+        </locale>
+
+        <locale name="watch.add.tags">
+<pt><![CDATA[Etiqueta [tag] adicionada]]></pt>
+        </locale>
+        <locale name="watch.delete.tags">
+<pt><![CDATA[Etiqueta [tag] eliminada]]></pt>
+        </locale>
+        <locale name="watch.edit.tags">
+<pt><![CDATA[Etiqueta [tag] editada]]></pt>
+        </locale>
+
+        <locale name="template.tag.header.results">
+<pt><![CDATA[Páginas com a etiqueta [tag]]]></pt>
+        </locale>
+
+        <locale name="message.types.tag.no.entries.found">
+<pt><![CDATA[A pesquisa por etiquetas não encontrou resultados.]]></pt>
+        </locale>
+
+        <locale name="message.site.has.no.tags">
+<pt><![CDATA[A página não tem etiquetas.]]></pt>
+        </locale>
+
+        <locale name="message.site.result">
+<pt><![CDATA[Resultados [start] - [end] de [count] entradas]]></pt>
+        </locale>
+
+        <locale name="template.tags.search.header.selectTags">
+<pt><![CDATA[Temas selecionados:]]></pt>
+        </locale>
+        <locale name="template.tags.search.header.availableTags">
+<pt><![CDATA[Temas disponíveis:]]></pt>
+        </locale>
+        <locale name="template.tags.search.header.result">
+<pt><![CDATA[Resultados:]]></pt>
+        </locale>
+        <locale name="template.tags.search.result.tagList">
+<pt><![CDATA[Etiquetas atribuídas:]]></pt>
+        </locale>
+
+        <locale name="quiqqer.tag.search.settings.title">
+<pt><![CDATA[Definições da pesquisa por etiquetas]]></pt>
+        </locale>
+
+        <locale name="quiqqer.tag.settings.showCreator">
+<pt><![CDATA[Mostrar autor]]></pt>
+        </locale>
+
+        <locale name="quiqqer.tag.settings.showDate">
+<pt><![CDATA[Mostrar data]]></pt>
+        </locale>
+        <locale name="quiqqer.tag.settings.limit">
+<pt><![CDATA[Número de resultados por página]]></pt>
+        </locale>
+        <locale name="quiqqer.tag.settings.showPagination">
+<pt><![CDATA[Mostrar paginação]]></pt>
+        </locale>
+        <locale name="quiqqer.tag.settings.showAvailableTags">
+<pt><![CDATA[Mostrar as etiquetas disponíveis]]></pt>
+        </locale>
+        <locale name="quiqqer.tag.settings.showSelectedTags">
+<pt><![CDATA[Mostrar as etiquetas selecionadas]]></pt>
+        </locale>
+        <locale name="quiqqer.tag.settings.defaultTags">
+<pt><![CDATA[Etiquetas pré-selecionadas]]></pt>
+        </locale>
+
+        <locale name="message.group.successful.save">
+<pt><![CDATA[O grupo de etiquetas foi guardado.]]></pt>
+        </locale>
+
+<!-- Class: Manager -->
+        <locale name="exception.manager.cannot.delete.group.with.children">
+<pt><![CDATA[Não é possível eliminar grupos de etiquetas que contenham outros grupos. Elimina primeiro todos os seus subgrupos.]]></pt>
+        </locale>
+
+<!-- Class: Groups\Group -->
+        <locale name="exception.groups.group.parent.does.not.exist">
+<pt><![CDATA[O grupo de etiquetas #[tagGroupId] não pode ser atribuído como grupo superior porque não existe.]]></pt>
+        </locale>
+        <locale name="exception.groups.group.cannot.be.its.own.parent">
+<pt><![CDATA[Um grupo de etiquetas não pode ser o seu próprio grupo superior.]]></pt>
+        </locale>
+        <locale name="exception.groups.group.parent.cannot.be.child">
+<pt><![CDATA[O grupo #[childTagGroupId] é um subgrupo do grupo #[tagGroupId] e não pode ser definido como o seu grupo superior.]]></pt>
+        </locale>
+        <locale name="exception.tag.creation">
+<pt><![CDATA[Não foi possível criar a etiqueta.]]></pt>
+        </locale>
+    </groups>
+
+<!-- Translations for quiqqer/search -->
+    <groups name="quiqqer/search" datatype="php,js">
+
+<!-- Search fields -->
+        <locale name="tpl.search.field.tags">
+<pt><![CDATA[Pesquisar nas etiquetas das páginas]]></pt>
+        </locale>
+
+    </groups>
+</locales>
