@@ -9,15 +9,27 @@ use QUI\Tags\Cron;
 
 class CronTestProxy extends Cron
 {
-    private static Project $Project;
+    /** @var array<string, Project> */
+    private static array $projects = [];
 
     public static function setProject(Project $Project): void
     {
-        self::$Project = $Project;
+        self::$projects[$Project->getName() . '/' . $Project->getLang()] = $Project;
+    }
+
+    public static function resetProjects(): void
+    {
+        self::$projects = [];
+    }
+
+    /** @return list<Project> */
+    protected static function getProjectList(): array
+    {
+        return array_values(self::$projects);
     }
 
     protected static function resolveProject(string $project, string $lang): Project
     {
-        return self::$Project;
+        return self::$projects[$project . '/' . $lang];
     }
 }
