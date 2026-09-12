@@ -6,3 +6,9 @@ include:
       php-83: true
       php-84: true
       php-85: true
+
+javascript-tests:
+  image: node:22-alpine
+  stage: test
+  script:
+    - node --test tests/javascript/*.test.cjs

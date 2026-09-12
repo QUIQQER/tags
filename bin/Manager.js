@@ -63,6 +63,8 @@ define('package/quiqqer/tags/bin/Manager', [
             this.$project          = false;
             this.$lang             = false;
             this.$tagGroupsEnabled = null;
+            this.$search = '';
+            this.$loadRequest = 0;
 
             this.parent(options);
 
@@ -108,20 +110,6 @@ define('package/quiqqer/tags/bin/Manager', [
             });
 
             this.addButton({
-                text     : QUILocale.get(lg, 'panel.manager.button.delete.tag'),
-                textimage: 'fa fa-trash',
-                name     : 'delete-tag',
-                disabled : true,
-                events   : {
-                    onClick: function () {
-                        self.openDeleteWindow();
-                    }
-                }
-            });
-
-            this.addButton({type: 'separator'});
-
-            this.addButton({
                 text     : QUILocale.get(lg, 'panel.manager.button.showtagsites'),
                 textimage: 'fa fa-file-text-o',
                 name     : 'showtagsites',
@@ -134,6 +122,53 @@ define('package/quiqqer/tags/bin/Manager', [
                     }
                 }
             });
+
+            const Search = document.createElement('form');
+            Search.className = 'quiqqer-tags-manager-search';
+            Search.setAttribute('role', 'search');
+            Search.setAttribute('aria-label', QUILocale.get('quiqqer/core', 'search'));
+
+            this.$SearchInput = document.createElement('input');
+            this.$SearchInput.type = 'search';
+            this.$SearchInput.dataset.name = 'tag-search';
+            this.$SearchInput.placeholder = QUILocale.get('quiqqer/core', 'search');
+            this.$SearchInput.setAttribute('aria-label', QUILocale.get('quiqqer/core', 'search'));
+            this.$SearchInput.disabled = true;
+            Search.appendChild(this.$SearchInput);
+
+            this.$SearchButton = document.createElement('button');
+            this.$SearchButton.type = 'submit';
+            this.$SearchButton.className = 'qui-button';
+            this.$SearchButton.dataset.name = 'search-submit';
+            this.$SearchButton.textContent = QUILocale.get('quiqqer/core', 'search');
+            this.$SearchButton.disabled = true;
+            Search.appendChild(this.$SearchButton);
+
+            Search.addEventListener('submit', (event) => {
+                event.preventDefault();
+                this.search().catch(() => {}); // AJAX reports errors globally.
+            });
+            this.$SearchInput.addEventListener('input', () => {
+                if (this.$SearchInput.value === '' && this.$search !== '') {
+                    this.search().catch(() => {});
+                }
+            });
+            this.addButton(Search);
+            this.addButton({type: 'separator'});
+            this.addButton({
+                title: QUILocale.get(lg, 'panel.manager.button.delete.tag'),
+                textimage: 'fa fa-trash',
+                name: 'delete-tag',
+                disabled: true,
+                events: {
+                    onClick: () => this.openDeleteWindow()
+                }
+            });
+            this.getButtons('delete-tag').getElm().setAttribute(
+                'aria-label', QUILocale.get(lg, 'panel.manager.button.delete.tag')
+            );
+            this.getButtons('delete-tag').getElm().firstElementChild?.setAttribute('aria-hidden', 'true');
+            this.getButtonBar().getElm().classList.add('quiqqer-tags-manager-toolbar');
         },
 
         /**
@@ -221,6 +256,7 @@ define('package/quiqqer/tags/bin/Manager', [
             this.$Grid = new Grid(Container, {
                 columnModel      : columns,
                 pagination       : true,
+                filterInput      : false,
                 multipleSelection: true,
                 serverSort       : true
             });
@@ -275,6 +311,16 @@ define('package/quiqqer/tags/bin/Manager', [
             return this.loadProject(this.$project, this.$lang);
         },
 
+        search: function () {
+            if (!this.$Grid || !this.$project) {
+                return Promise.resolve();
+            }
+
+            this.$search = this.$SearchInput.value.trim();
+            this.$Grid.options.page = 1;
+            return this.refresh();
+        },
+
 
         /**
          * Tag Methods
@@ -290,33 +336,41 @@ define('package/quiqqer/tags/bin/Manager', [
         loadProject: function (project, lang) {
             var self = this;
 
+            if (project !== this.$project || lang !== this.$lang) {
+                this.$Grid.options.page = 1;
+            }
+
             this.$project = project;
             this.$lang    = lang;
 
             this.getButtons('add-tag').enable();
+            this.$SearchInput.disabled = false;
+            this.$SearchButton.disabled = false;
 
             var GridParams = {
                 perPage: this.$Grid.options.perPage,
                 page   : this.$Grid.options.page,
                 sortOn : this.$Grid.getAttribute('sortOn'),
-                sortBy : this.$Grid.getAttribute('sortBy')
+                sortBy : this.$Grid.getAttribute('sortBy'),
+                search : this.$search
             };
-
-            switch (this.$Grid.getAttribute('sortOn')) {
-                case 'count':
-                    this.$Grid.setAttribute('serverSort', false);
-                    this.$Grid.sort(2, 'count');
-                    this.$Grid.setAttribute('serverSort', true);
-                    return Promise.resolve();
-
-                default:
-                    GridParams.sortOn = this.$Grid.getAttribute('sortOn');
-            }
+            const request = ++this.$loadRequest;
 
             this.Loader.show();
 
             return new Promise(function (resolve, reject) {
                 QUIAjax.get('package_quiqqer_tags_ajax_project_getList', function (result) {
+                    if (request !== self.$loadRequest) {
+                        resolve();
+                        return;
+                    }
+
+                    // Keep the existing site-count sorting within the loaded page.
+                    if (GridParams.sortOn === 'count') {
+                        const direction = GridParams.sortBy === 'DESC' ? -1 : 1;
+                        result.data.sort((a, b) => direction * (Number(a.count) - Number(b.count)));
+                    }
+
                     self.$Grid.setData(result);
                     self.getButtons('delete-tag').disable();
                     self.getButtons('showtagsites').disable();
@@ -328,7 +382,12 @@ define('package/quiqqer/tags/bin/Manager', [
                     projectName: self.$project,
                     projectLang: self.$lang,
                     gridParams : JSON.encode(GridParams),
-                    onError    : reject
+                    onError    : function (error) {
+                        if (request === self.$loadRequest) {
+                            self.Loader.hide();
+                        }
+                        reject(error);
+                    }
                 });
             });
         },

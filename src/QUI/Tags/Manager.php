@@ -4,6 +4,7 @@ namespace QUI\Tags;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Query\QueryBuilder;
 use QUI;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
@@ -181,16 +182,18 @@ class Manager
     /**
      * Count the tags in the Project
      *
+     * @param array<string, mixed> $params
      * @return integer
      */
-    public function count(): int
+    public function count(array $params = []): int
     {
         try {
-            return (int)QUI::getDataBaseConnection()->createQueryBuilder()
+            $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
                 ->select('COUNT(' . Doctrine::quoteIdentifier('tag') . ')')
-                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
-                ->executeQuery()
-                ->fetchOne();
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)));
+            $this->applyListSearch($QueryBuilder, $params);
+
+            return (int)$QueryBuilder->executeQuery()->fetchOne();
         } catch (\Exception $Exception) {
             QUI\System\Log::writeDebugException($Exception);
             QUI\System\Log::addError($Exception->getMessage());
@@ -642,6 +645,7 @@ class Manager
         $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
             ->select('*')
             ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)));
+        $this->applyListSearch($QueryBuilder, $params);
         $sortOn = $params['sortOn'] ?? 'tag';
         $allowedSortColumns = ['tag', 'title', 'url', 'generated', 'generator'];
 
@@ -706,6 +710,30 @@ class Manager
         }
 
         return $result;
+    }
+
+    /**
+     * Apply the same search to the result rows and their pagination count.
+     *
+     * @param array<string, mixed> $params
+     */
+    private function applyListSearch(QueryBuilder $QueryBuilder, array $params): void
+    {
+        $search = $params['search'] ?? '';
+
+        if (!is_string($search) || trim($search) === '') {
+            return;
+        }
+
+        $conditions = [];
+
+        foreach (['tag', 'title', 'desc'] as $column) {
+            $conditions[] = 'LOWER(' . Doctrine::quoteIdentifier($column) . ") LIKE :tagSearch ESCAPE '!'";
+        }
+
+        $search = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($search)));
+        $QueryBuilder->andWhere('(' . implode(' OR ', $conditions) . ')')
+            ->setParameter('tagSearch', '%' . $search . '%');
     }
 
     /**

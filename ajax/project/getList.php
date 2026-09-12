@@ -45,7 +45,7 @@ QUI::getAjax()->registerFunction(
             }
         }
 
-        return $Grid->parseResult($result, $Tags->count());
+        return $Grid->parseResult($result, $Tags->count($gridParams));
     },
     ['projectName', 'projectLang', 'gridParams'],
     'Permission::checkAdminUser'
