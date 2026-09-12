@@ -27,6 +27,7 @@ class CronDatabaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        CronTestProxy::resetProjects();
 
         $this->originalConnection = QUI::getDataBaseConnection();
         $this->connection = DriverManager::getConnection([
@@ -84,14 +85,16 @@ class CronDatabaseTest extends TestCase
     protected function tearDown(): void
     {
         $this->setConnection($this->originalConnection);
+        $this->connection->close();
+        CronTestProxy::resetProjects();
 
         parent::tearDown();
     }
 
-    public function testRequiresProjectAndLanguageParameters(): void
+    public function testIncompleteParametersDoNotRebuildUnrelatedProjects(): void
     {
-        CronTestProxy::createCache([], null);
         CronTestProxy::createCache(['project' => 'tagscronphpunit'], null);
+        CronTestProxy::createCache(['lang' => 'en'], null);
 
         self::assertSame(
             'OldTag',
@@ -103,8 +106,53 @@ class CronDatabaseTest extends TestCase
         );
     }
 
+    public function testNoParametersRebuildEveryProjectLanguage(): void
+    {
+        $Projects = [$this->Project];
+
+        foreach ([['tagscronphpunit', 'de'], ['tagscronother', 'fr']] as [$name, $lang]) {
+            $Project = $this->createMock(Project::class);
+            $Project->method('getName')->willReturn($name);
+            $Project->method('getLang')->willReturn($lang);
+            $Project->method('get')->with(7)->willReturn($this->createSite(7, true, false));
+            CronTestProxy::setProject($Project);
+            $this->createTables($Project);
+            $this->connection->insert(QUI::getDBProjectTableName('tags_sites', $Project), [
+                'id' => 7,
+                'tags' => ',OtherTag,'
+            ]);
+            $Projects[] = $Project;
+        }
+
+        CronTestProxy::createCache([], null);
+
+        foreach ($Projects as $Project) {
+            $cacheTable = QUI::getDBProjectTableName('tags_cache', $Project);
+            $siteCacheTable = QUI::getDBProjectTableName('tags_siteCache', $Project);
+            self::assertGreaterThan(0, (int)$this->connection->fetchOne('SELECT COUNT(*) FROM ' . $cacheTable));
+            self::assertGreaterThan(0, (int)$this->connection->fetchOne('SELECT COUNT(*) FROM ' . $siteCacheTable));
+            self::assertSame(0, (int)$this->connection->fetchOne(
+                'SELECT COUNT(*) FROM ' . $cacheTable . ' WHERE tag = ?',
+                ['OldTag']
+            ));
+        }
+    }
+
+    public function testNoProjectsLeaveExistingCacheUntouched(): void
+    {
+        CronTestProxy::resetProjects();
+        CronTestProxy::createCache([], null);
+        self::assertSame('OldTag', $this->connection->fetchOne('SELECT tag FROM ' . $this->tagCacheTable));
+    }
+
     public function testRebuildsTagAndSiteCachesFromAssignments(): void
     {
+        $OtherProject = $this->createMock(Project::class);
+        $OtherProject->method('getName')->willReturn('unrelated');
+        $OtherProject->method('getLang')->willReturn('fr');
+        $OtherProject->expects(self::never())->method('get');
+        CronTestProxy::setProject($OtherProject);
+
         CronTestProxy::createCache([
             'project' => 'tagscronphpunit',
             'lang' => 'en'
@@ -134,19 +182,20 @@ class CronDatabaseTest extends TestCase
         ], $siteCache);
     }
 
-    private function createTables(): void
+    private function createTables(?Project $Project = null): void
     {
+        $Project ??= $this->Project;
         $Schema = new Schema();
-        $Sites = $Schema->createTable($this->sitesTable);
+        $Sites = $Schema->createTable(QUI::getDBProjectTableName('tags_sites', $Project));
         $Sites->addColumn('id', 'integer');
         $Sites->addColumn('tags', 'text', ['notnull' => false]);
         $Sites->setPrimaryKey(['id']);
-        $TagCache = $Schema->createTable($this->tagCacheTable);
+        $TagCache = $Schema->createTable(QUI::getDBProjectTableName('tags_cache', $Project));
         $TagCache->addColumn('tag', 'string');
         $TagCache->addColumn('sites', 'text', ['notnull' => false]);
         $TagCache->addColumn('count', 'integer');
         $TagCache->setPrimaryKey(['tag']);
-        $SiteCache = $Schema->createTable($this->siteCacheTable);
+        $SiteCache = $Schema->createTable(QUI::getDBProjectTableName('tags_siteCache', $Project));
         $SiteCache->addColumn('id', 'integer');
         $SiteCache->addColumn('name', 'string', ['notnull' => false]);
         $SiteCache->addColumn('title', 'string');
