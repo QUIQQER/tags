@@ -193,21 +193,17 @@ class TagList extends QUI\Control
             }
         }
 
-        $result = $this->getProject()->getSites([
+        $result = $Project->getSitesIds([
             'where' => [
                 'type' => 'quiqqer/tags:types/tag-listing'
             ],
             'limit' => 1
         ]);
 
-        if (
-            !isset($result[0])
-            || !is_array($result[0])
-            || !isset($result[0]['id'])
-        ) {
+        if (!isset($result[0]['id'])) {
             throw new Exception('No tag listing site found');
         }
 
-        return $this->getProject()->get($result[0]['id']);
+        return $Project->get($result[0]['id']);
     }
 }

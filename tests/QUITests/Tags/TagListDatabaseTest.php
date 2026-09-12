@@ -40,7 +40,7 @@ class TagListDatabaseTest extends TestCase
         $Project->method('getLang')->willReturn('en');
         $Site = $this->createMock(Site::class);
         $Project->method('getConfig')->willReturn(false);
-        $Project->method('getSites')->willReturn([['id' => 77]]);
+        $Project->method('getSitesIds')->willReturn([['id' => 77]]);
         $Project->method('get')->with(77)->willReturn($Site);
         $table = QUI::getDBProjectTableName('tags', $Project);
         $Schema = new Schema();
@@ -164,7 +164,7 @@ class TagListDatabaseTest extends TestCase
         $Project->method('getName')->willReturn('tagsphpunit');
         $Project->method('getLang')->willReturn('en');
         $Project->method('getConfig')->willReturn(false);
-        $Project->method('getSites')->willReturn([]);
+        $Project->method('getSitesIds')->willReturn([]);
         $TagList = new TagList(['Project' => $Project]);
 
         $this->expectException(\Exception::class);

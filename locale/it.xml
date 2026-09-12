@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<locales>
+    <groups name="quiqqer/tags" datatype="js">
+
+        <locale name="control.tagcontainer.sheet.btn.add">
+<it><![CDATA[Aggiungi]]></it>
+        </locale>
+
+        <locale name="panel.delete.window.message">
+<it><![CDATA[<p>Vuoi davvero eliminare il seguente tag?</p><p><strong>[tags]</strong></p>]]></it>
+        </locale>
+        <locale name="panel.delete.window.title">
+<it><![CDATA[Elimina tag]]></it>
+        </locale>
+        <locale name="panel.manager.tag.title">
+<it><![CDATA[Titolo del tag]]></it>
+        </locale>
+        <locale name="panel.manager.tag.count">
+<it><![CDATA[Numero di pagine]]></it>
+        </locale>
+        <locale name="panel.manager.tag.groups">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+        <locale name="panel.add.window.title">
+<it><![CDATA[Aggiungi tag]]></it>
+        </locale>
+        <locale name="panel.add.window.error.title.empty">
+<it><![CDATA[Inserisci un titolo.]]></it>
+        </locale>
+        <locale name="panel.add.window.shortcuts.label">
+<it><![CDATA[Scorciatoie da tastiera]]></it>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save">
+<it><![CDATA[Salva]]></it>
+        </locale>
+        <locale name="panel.add.window.shortcuts.save.description">
+<it><![CDATA[Salva (nella descrizione)]]></it>
+        </locale>
+        <locale name="panel.add.window.keepOpen">
+<it><![CDATA[Mantieni aperta la finestra per creare più tag]]></it>
+        </locale>
+        <locale name="panel.add.window.keepOpen.group">
+<it><![CDATA[Mantieni aperta la finestra per creare più gruppi]]></it>
+        </locale>
+        <locale name="site.window.add.tag.title" html="true">
+<it><![CDATA[<p>Il tag <strong>[tag]</strong> non esiste ancora. Vuoi aggiungerlo?</p>]]></it>
+        </locale>
+        <locale name="site.table.description">
+<it><![CDATA[Clicca sul campo dei tag per aggiungere tag alla pagina.]]></it>
+        </locale>
+        <locale name="site.table.title">
+<it><![CDATA[Tag assegnati alla pagina]]></it>
+        </locale>
+        <locale name="site.table.groups.title">
+<it><![CDATA[Gruppi di tag assegnati alla pagina]]></it>
+        </locale>
+        <locale name="control.tagcontainer.window.add.title">
+<it><![CDATA[Aggiungi tag]]></it>
+        </locale>
+        <locale name="control.tagcontainer.window.message.no.tags">
+<it><![CDATA[Nessun tag trovato]]></it>
+        </locale>
+        <locale name="control.tagcontainer.sheet.btn.cancel">
+<it><![CDATA[Annulla]]></it>
+        </locale>
+        <locale name="panel.manager.button.add.tag">
+<it><![CDATA[Aggiungi tag]]></it>
+        </locale>
+        <locale name="panel.manager.button.delete.tag">
+<it><![CDATA[Elimina i tag selezionati]]></it>
+        </locale>
+        <locale name="panel.manager.image.tag">
+<it><![CDATA[Immagine del tag]]></it>
+        </locale>
+        <locale name="panel.manager.title">
+<it><![CDATA[Gestione dei tag]]></it>
+        </locale>
+        <locale name="control.tags.search.category.no.tags">
+<it><![CDATA[Nessun tag presente]]></it>
+        </locale>
+        <locale name="panel.showtagsites.title">
+<it><![CDATA[Pagine associate al tag «[tag]»]]></it>
+        </locale>
+
+        <locale name="controls.panel.window.tagGroups">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+
+<!-- Control: TagSites -->
+        <locale name="controls.sites.table.btns.opensitepanel">
+<it><![CDATA[Apri il pannello della pagina]]></it>
+        </locale>
+        <locale name="controls.sites.table.column.id">
+<it><![CDATA[ID della pagina]]></it>
+        </locale>
+        <locale name="controls.sites.table.column.title">
+<it><![CDATA[Titolo della pagina]]></it>
+        </locale>
+        <locale name="controls.sites.table.column.url">
+<it><![CDATA[URL]]></it>
+        </locale>
+        <locale name="panel.manager.button.showtagsites">
+<it><![CDATA[Mostra le pagine con questo tag]]></it>
+        </locale>
+
+        <locale name="tag.groups.grid.generate">
+<it><![CDATA[Generato]]></it>
+        </locale>
+
+<!-- Control: TagSites -->
+        <locale name="tag.groups.panel.title">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+        <locale name="tag.groups.panel.template.parent">
+<it><![CDATA[Gruppo di tag padre]]></it>
+        </locale>
+
+        <locale name="tag.groups.window.create.title">
+<it><![CDATA[Crea gruppo di tag]]></it>
+        </locale>
+        <locale name="tag.groups.window.delete.title">
+<it><![CDATA[Elimina gruppi di tag]]></it>
+        </locale>
+        <locale name="tag.groups.window.delete.info" html="true">
+<it><![CDATA[Vuoi davvero eliminare definitivamente i seguenti gruppi di tag?<br><br>[groups]]]></it>
+        </locale>
+
+        <locale name="tag.groups.group.title">
+<it><![CDATA[Gruppo di tag: [group] (#[id])]]></it>
+        </locale>
+        <locale name="control.tags.group.tagCategory">
+<it><![CDATA[Tag assegnati]]></it>
+        </locale>
+        <locale name="controls.groups.map.category.all">
+<it><![CDATA[Tutti i gruppi di tag]]></it>
+        </locale>
+
+        <locale name="control.tags.search.window.title">
+<it><![CDATA[Ricerca per tag]]></it>
+        </locale>
+
+        <locale name="control.grouptags.search.window.title">
+<it><![CDATA[Cerca gruppi di tag]]></it>
+        </locale>
+        <locale name="control.grouptags.search.window.info">
+<it><![CDATA[Seleziona un gruppo di tag.]]></it>
+        </locale>
+        <locale name="control.grouptags.search.window.info.multiselect" html="true">
+<it><![CDATA[Seleziona uno o più gruppi di tag.<br><i>(Selezione multipla con Ctrl + clic)</i>]]></it>
+        </locale>
+
+        <locale name="message.limit.tags.to.site">
+<it><![CDATA[Non puoi aggiungere più di [amount] tag a questa pagina. Rimuovine alcuni per aggiungerne altri.]]></it>
+        </locale>
+        <locale name="window.tag.group.search.title">
+<it><![CDATA[Ricerca per tag]]></it>
+        </locale>
+        <locale name="window.tag.group.search.all.tags">
+<it><![CDATA[Tutti i tag]]></it>
+        </locale>
+        <locale name="window.tag.group.search.suggest">
+<it><![CDATA[Tag suggeriti]]></it>
+        </locale>
+        <locale name="window.tag.group.search.selected">
+<it><![CDATA[Tag selezionati]]></it>
+        </locale>
+        <locale name="window.tag.group.search.selected.button.count">
+<it><![CDATA[Applica ([count])]]></it>
+        </locale>
+        <locale name="window.tag.group.search.selected.button">
+<it><![CDATA[Applica]]></it>
+        </locale>
+        <locale name="quiqqer.tags.select.placeholder">
+<it><![CDATA[Cerca un tag…]]></it>
+        </locale>
+    </groups>
+    <groups name="quiqqer/tags" datatype="php,js">
+        <locale name="package.title">
+<it><![CDATA[QUIQQER: tag]]></it>
+        </locale>
+        <locale name="package.description" html="true">
+<it><![CDATA[Questo pacchetto aggiunge la gestione dei tag a QUIQQER.]]></it>
+        </locale>
+
+        <locale name="permission.tags._header">
+<it><![CDATA[Gestione dei tag]]></it>
+        </locale>
+        <locale name="permission.tag._header">
+<it><![CDATA[Gestione dei tag]]></it>
+        </locale>
+        <locale name="permission.tags.mcp">
+<it><![CDATA[Consente di gestire tag e gruppi di tag tramite il server MCP (IA).]]></it>
+        </locale>
+        <locale name="permission.tags.siteLimit">
+<it><![CDATA[Numero di tag che l’utente può aggiungere a una pagina.]]></it>
+        </locale>
+        <locale name="permission.tag.siteLimit">
+<it><![CDATA[Numero di tag che l’utente può aggiungere a una pagina.]]></it>
+        </locale>
+        <locale name="permission.tags.delete">
+<it><![CDATA[Consente di eliminare tag.]]></it>
+        </locale>
+        <locale name="permission.tag.delete">
+<it><![CDATA[Consente di eliminare tag.]]></it>
+        </locale>
+        <locale name="permission.tags.create">
+<it><![CDATA[Consente di creare e modificare tag.]]></it>
+        </locale>
+        <locale name="permission.tag.create">
+<it><![CDATA[Consente di creare e modificare tag.]]></it>
+        </locale>
+        <locale name="permission.tags.group._header">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+        <locale name="permission.tag.group._header">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+        <locale name="permission.tags.group.create">
+<it><![CDATA[Consente di creare gruppi di tag.]]></it>
+        </locale>
+        <locale name="permission.tag.group.create">
+<it><![CDATA[Consente di creare gruppi di tag.]]></it>
+        </locale>
+        <locale name="permission.tags.group.delete">
+<it><![CDATA[Consente di eliminare gruppi di tag.]]></it>
+        </locale>
+        <locale name="permission.tag.group.delete">
+<it><![CDATA[Consente di eliminare gruppi di tag.]]></it>
+        </locale>
+
+<!-- Settings -->
+        <locale name="menu.tag.settings.title">
+<it><![CDATA[Tag]]></it>
+        </locale>
+        <locale name="window.tag.settings.title">
+<it><![CDATA[Impostazioni dei tag]]></it>
+        </locale>
+        <locale name="settings.window.tags.useGroups">
+<it><![CDATA[Usa gruppi di tag]]></it>
+        </locale>
+        <locale name="settings.window.tags.getTagsRecursive.text">
+<it><![CDATA[Mostra anche i tag dei sottogruppi]]></it>
+        </locale>
+        <locale name="settings.window.tags.getTagsRecursive.description">
+<it><![CDATA[Quando selezioni un gruppo per filtrare un elenco di tag, vengono mostrati anche tutti i tag dei suoi sottogruppi e dei relativi sottogruppi, fino all’ultimo livello.]]></it>
+        </locale>
+
+        <locale name="exception.limit.tags.to.site">
+<it><![CDATA[Puoi aggiungere solo [limit] tag alla pagina. I tag non sono stati aggiunti.]]></it>
+        </locale>
+        <locale name="exception.tag.title.exist">
+<it><![CDATA[Esiste già un tag con lo stesso titolo.]]></it>
+        </locale>
+        <locale name="exception.tag.already.exists">
+<it><![CDATA[Il tag esiste già.]]></it>
+        </locale>
+        <locale name="exception.tag.not.found">
+<it><![CDATA[Il tag non è stato trovato.]]></it>
+        </locale>
+        <locale name="tag.control.placeholder.limit">
+<it><![CDATA[Non è possibile aggiungere altri tag: è stato raggiunto il numero massimo consentito.]]></it>
+        </locale>
+        <locale name="tag.control.placeholder.addtag">
+<it><![CDATA[Inserisci qui il tag desiderato…]]></it>
+        </locale>
+        <locale name="tag.control.placeholder.addgroup">
+<it><![CDATA[Inserisci qui il gruppo di tag desiderato…]]></it>
+        </locale>
+        <locale name="tag">
+<it><![CDATA[Tag]]></it>
+        </locale>
+        <locale name="message.no.tags.found">
+<it><![CDATA[Nessun tag trovato.]]></it>
+        </locale>
+        <locale name="message.no.tag.groups.found">
+<it><![CDATA[Nessun gruppo di tag trovato.]]></it>
+        </locale>
+        <locale name="message.no.permission.create.tags">
+<it><![CDATA[Non hai i permessi necessari per creare tag. Usa quelli già esistenti.]]></it>
+        </locale>
+
+        <locale name="project.settings.title">
+<it><![CDATA[Tag]]></it>
+        </locale>
+        <locale name="project.settings.tagSearchId.title">
+<it><![CDATA[Ricerca per tag predefinita]]></it>
+        </locale>
+
+        <locale name="filter.abc">
+<it><![CDATA[A B C]]></it>
+        </locale>
+        <locale name="filter.def">
+<it><![CDATA[D E F]]></it>
+        </locale>
+        <locale name="filter.ghi">
+<it><![CDATA[G H I]]></it>
+        </locale>
+        <locale name="filter.jkl">
+<it><![CDATA[J K L]]></it>
+        </locale>
+        <locale name="filter.mno">
+<it><![CDATA[M N O]]></it>
+        </locale>
+        <locale name="filter.pqr">
+<it><![CDATA[P Q R]]></it>
+        </locale>
+        <locale name="filter.stu">
+<it><![CDATA[S T U]]></it>
+        </locale>
+        <locale name="filter.vz">
+<it><![CDATA[V - Z]]></it>
+        </locale>
+        <locale name="filter.123">
+<it><![CDATA[0 - 9]]></it>
+        </locale>
+        <locale name="filter.special">
+<it><![CDATA[Caratteri speciali]]></it>
+        </locale>
+        <locale name="filter.all">
+<it><![CDATA[Tutti]]></it>
+        </locale>
+        <locale name="filter.groups.all">
+<it><![CDATA[Tutti i gruppi]]></it>
+        </locale>
+
+        <locale name="bricks.tags.title">
+<it><![CDATA[Tag: elenco]]></it>
+        </locale>
+        <locale name="bricks.tags.description">
+<it><![CDATA[]]></it>
+        </locale>
+
+        <locale name="quiqqer/tags:types/tag-listing.title">
+<it><![CDATA[Elenco dei tag]]></it>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-listing.description" html="true">
+<it><![CDATA[Questo tipo di pagina elenca tutti i tag con descrizione e icona. Cliccando su un tag, l’utente accede a una pagina di risultati con tutte le pagine a cui è assegnato.]]></it>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-search.title">
+<it><![CDATA[Ricerca per tag]]></it>
+        </locale>
+        <locale name="quiqqer/tags:types/tag-search.description" html="true">
+<it><![CDATA[La ricerca per tag permette di trovare contenuti su vari argomenti senza digitare termini di ricerca. Il gestore del sito può assegnare liberamente questi argomenti come tag a ogni pagina. L’utente può selezionare uno o più tag per restringere i risultati. L’elenco mostra tutte le pagine associate internamente ai tag cercati. Il gestore può configurare la ricerca, ad esempio per preselezionare alcuni tag o adattarne la visualizzazione.]]></it>
+        </locale>
+
+        <locale name="cron.createCache.title">
+<it><![CDATA[Crea la cache dei tag]]></it>
+        </locale>
+        <locale name="cron.createCache.description">
+<it><![CDATA[Crea la tabella della cache di tutti i tag e gruppi di tag.]]></it>
+        </locale>
+        <locale name="window.tag.group.search.groupLabel">
+<it><![CDATA[Raggruppamento]]></it>
+        </locale>
+        <locale name="window.tag.group.search.tagLabel">
+<it><![CDATA[Seleziona:]]></it>
+        </locale>
+        <locale name="window.tag.group.search.selectLabel">
+<it><![CDATA[Selezione:]]></it>
+        </locale>
+        <locale name="window.tag.no.tags.selected">
+<it><![CDATA[Nessun tag ancora selezionato]]></it>
+        </locale>
+        <locale name="window.tag.no.tags.selectedTags">
+<it><![CDATA[Tag selezionati]]></it>
+        </locale>
+    </groups>
+    <groups name="quiqqer/tags" datatype="php">
+<!-- Ajax -->
+        <locale name="message.ajax.groups.delete.error" html="true">
+<it><![CDATA[Si è verificato un errore durante l’eliminazione dei gruppi di tag:<br><br>[error]]]></it>
+        </locale>
+        <locale name="message.ajax.groups.delete.success">
+<it><![CDATA[I gruppi di tag sono stati eliminati.]]></it>
+        </locale>
+        <locale name="message.group.save.error" html="true">
+<it><![CDATA[Si è verificato un errore durante il salvataggio del gruppo di tag #[tagGroupId]:<br><br>[error]]]></it>
+        </locale>
+
+        <locale name="site.panel.category.title">
+<it><![CDATA[Tag]]></it>
+        </locale>
+        <locale name="admin.types.tag.search.desc">
+<it><![CDATA[QUIQQER: ricerca per tag]]></it>
+        </locale>
+        <locale name="admin.types.tag.search">
+<it><![CDATA[QUIQQER: ricerca per tag]]></it>
+        </locale>
+        <locale name="admin.types.tag.desc">
+<it><![CDATA[QUIQQER: tag singolo]]></it>
+        </locale>
+        <locale name="admin.types.tag.listing">
+<it><![CDATA[QUIQQER: elenco dei tag]]></it>
+        </locale>
+        <locale name="admin.types.tag.listing.desc">
+<it><![CDATA[]]></it>
+        </locale>
+        <locale name="admin.types.tag">
+<it><![CDATA[QUIQQER: tag singolo]]></it>
+        </locale>
+        <locale name="menu.tags">
+<it><![CDATA[Tag]]></it>
+        </locale>
+        <locale name="menu.tags.manager">
+<it><![CDATA[Gestione dei tag]]></it>
+        </locale>
+        <locale name="menu.tags.groups">
+<it><![CDATA[Gruppi di tag]]></it>
+        </locale>
+
+        <locale name="watch.add.tags">
+<it><![CDATA[Tag [tag] aggiunto]]></it>
+        </locale>
+        <locale name="watch.delete.tags">
+<it><![CDATA[Tag [tag] eliminato]]></it>
+        </locale>
+        <locale name="watch.edit.tags">
+<it><![CDATA[Tag [tag] modificato]]></it>
+        </locale>
+
+        <locale name="template.tag.header.results">
+<it><![CDATA[Pagine con il tag [tag]]]></it>
+        </locale>
+
+        <locale name="message.types.tag.no.entries.found">
+<it><![CDATA[La ricerca per tag non ha prodotto risultati.]]></it>
+        </locale>
+
+        <locale name="message.site.has.no.tags">
+<it><![CDATA[La pagina non ha tag.]]></it>
+        </locale>
+
+        <locale name="message.site.result">
+<it><![CDATA[Risultati [start] - [end] di [count] voci]]></it>
+        </locale>
+
+        <locale name="template.tags.search.header.selectTags">
+<it><![CDATA[Argomenti selezionati:]]></it>
+        </locale>
+        <locale name="template.tags.search.header.availableTags">
+<it><![CDATA[Argomenti disponibili:]]></it>
+        </locale>
+        <locale name="template.tags.search.header.result">
+<it><![CDATA[Risultati:]]></it>
+        </locale>
+        <locale name="template.tags.search.result.tagList">
+<it><![CDATA[Tag assegnati:]]></it>
+        </locale>
+
+        <locale name="quiqqer.tag.search.settings.title">
+<it><![CDATA[Impostazioni della ricerca per tag]]></it>
+        </locale>
+
+        <locale name="quiqqer.tag.settings.showCreator">
+<it><![CDATA[Mostra autore]]></it>
+        </locale>
+
+        <locale name="quiqqer.tag.settings.showDate">
+<it><![CDATA[Mostra data]]></it>
+        </locale>
+        <locale name="quiqqer.tag.settings.limit">
+<it><![CDATA[Numero di risultati per pagina]]></it>
+        </locale>
+        <locale name="quiqqer.tag.settings.showPagination">
+<it><![CDATA[Mostra paginazione]]></it>
+        </locale>
+        <locale name="quiqqer.tag.settings.showAvailableTags">
+<it><![CDATA[Mostra i tag disponibili]]></it>
+        </locale>
+        <locale name="quiqqer.tag.settings.showSelectedTags">
+<it><![CDATA[Mostra i tag selezionati]]></it>
+        </locale>
+        <locale name="quiqqer.tag.settings.defaultTags">
+<it><![CDATA[Tag preselezionati]]></it>
+        </locale>
+
+        <locale name="message.group.successful.save">
+<it><![CDATA[Il gruppo di tag è stato salvato.]]></it>
+        </locale>
+
+<!-- Class: Manager -->
+        <locale name="exception.manager.cannot.delete.group.with.children">
+<it><![CDATA[Non puoi eliminare un gruppo di tag che contiene altri gruppi. Elimina prima tutti i suoi sottogruppi.]]></it>
+        </locale>
+
+<!-- Class: Groups\Group -->
+        <locale name="exception.groups.group.parent.does.not.exist">
+<it><![CDATA[Il gruppo di tag #[tagGroupId] non può essere assegnato come gruppo padre perché non esiste.]]></it>
+        </locale>
+        <locale name="exception.groups.group.cannot.be.its.own.parent">
+<it><![CDATA[Un gruppo di tag non può essere il proprio gruppo padre.]]></it>
+        </locale>
+        <locale name="exception.groups.group.parent.cannot.be.child">
+<it><![CDATA[Il gruppo #[childTagGroupId] è un sottogruppo del gruppo #[tagGroupId] e non può quindi essere impostato come suo gruppo padre.]]></it>
+        </locale>
+        <locale name="exception.tag.creation">
+<it><![CDATA[Non è stato possibile creare il tag.]]></it>
+        </locale>
+    </groups>
+
+<!-- Translations for quiqqer/search -->
+    <groups name="quiqqer/search" datatype="php,js">
+
+<!-- Search fields -->
+        <locale name="tpl.search.field.tags">
+<it><![CDATA[Cerca nei tag delle pagine]]></it>
+        </locale>
+
+    </groups>
+</locales>

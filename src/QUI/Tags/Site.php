@@ -47,10 +47,6 @@ class Site
             $url = $Site->getLocation();
             $defaultSuffix = QUI\Rewrite::getDefaultSuffix();
 
-            if (!is_string($defaultSuffix)) {
-                $defaultSuffix = '';
-            }
-
             $url = str_replace($defaultSuffix, '', $url);
 
             static::registerListingPath($url . '/*', $Site);
