@@ -167,6 +167,35 @@ class ManagerDatabaseTest extends TestCase
         );
     }
 
+    public function testListSearchFiltersBeforePaginationAndCountsAllMatches(): void
+    {
+        $params = ['search' => 'TAG', 'perPage' => 1, 'page' => 2, 'sortOn' => 'title'];
+        self::assertSame(['BetaTag'], array_column($this->Manager->getList($params), 'tag'));
+        self::assertSame(3, $this->Manager->count($params));
+        $params['search'] = ' gamma ';
+        $params['page'] = 1;
+        self::assertSame(['GammaTag'], array_column($this->Manager->getList($params), 'tag'));
+        self::assertSame(1, $this->Manager->count($params));
+        self::assertSame([], $this->Manager->getList(['search' => 'not-found']));
+        self::assertSame(0, $this->Manager->count(['search' => 'not-found']));
+        self::assertCount(3, $this->Manager->getList(['search' => '   ']));
+    }
+
+    public function testListSearchMatchesDescriptionsAndTreatsWildcardsLiterally(): void
+    {
+        $this->connection->update($this->tagsTable, ['title' => 'Summer sale'], ['tag' => 'GammaTag']);
+        self::assertSame(['GammaTag'], array_column($this->Manager->getList(['search' => 'summer']), 'tag'));
+        $this->connection->update($this->tagsTable, ['desc' => 'Special 100%_! offer'], ['tag' => 'BetaTag']);
+        self::assertSame(['BetaTag'], array_column($this->Manager->getList(['search' => 'special']), 'tag'));
+        foreach (['100%_!', '%', '_', '!'] as $search) {
+            self::assertSame(['BetaTag'], array_column($this->Manager->getList(['search' => $search]), 'tag'));
+            self::assertSame(1, $this->Manager->count(['search' => $search]));
+        }
+        self::assertSame([], $this->Manager->getList(['search' => "' OR 1=1 --"]));
+        self::assertSame(0, $this->Manager->count(['search' => "' OR 1=1 --"]));
+        self::assertSame(3, $this->Manager->count());
+    }
+
     public function testSearchesTagsAndResolvesSiteIdsAndGroups(): void
     {
         $searchResult = $this->Manager->searchTags('ta', [

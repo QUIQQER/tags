@@ -1,5 +1,38 @@
 @CHARSET "UTF-8";
 
+.quiqqer-tags-manager-toolbar .qui-toolbar-tabs {
+    align-items: center;
+    display: flex;
+    min-width: max-content;
+}
+
+.quiqqer-tags-manager-toolbar .qui-toolbar-container {
+    overflow-x: auto;
+}
+
+.quiqqer-tags-manager-toolbar .qui-toolbar-tabs > * {
+    flex-shrink: 0;
+}
+
+.quiqqer-tags-manager-search {
+    align-items: center;
+    display: flex;
+    gap: 0.375rem;
+    margin: 0 0 0 auto;
+    padding-left: 1rem;
+}
+
+.quiqqer-tags-manager-search input {
+    font: inherit;
+    min-height: 30px;
+    width: clamp(10rem, 16vw, 16rem);
+}
+
+.quiqqer-tags-manager-search :focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 
 .qui-tags-add-window label,
 .qui-tags-add-window input,

@@ -28,6 +28,17 @@ class Cron
      */
     public static function createCache(array $params, $CronManager): void
     {
+        if (!isset($params['project']) && !isset($params['lang'])) {
+            foreach (static::getProjectList() as $Project) {
+                static::createCache([
+                    'project' => $Project->getName(),
+                    'lang' => $Project->getLang()
+                ], $CronManager);
+            }
+
+            return;
+        }
+
         if (!isset($params['project'])) {
             return;
         }
@@ -161,6 +172,16 @@ class Cron
             } catch (QUI\Exception $Exception) {
             }
         }
+    }
+
+    /**
+     * Return every configured project-language combination.
+     *
+     * @return array<int, QUI\Projects\Project>
+     */
+    protected static function getProjectList(): array
+    {
+        return QUI::getProjectManager()->getProjectList();
     }
 
     /**

@@ -4,6 +4,7 @@ namespace QUI\Tags;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Query\QueryBuilder;
 use QUI;
 use QUI\Permissions\Permission;
 use QUI\Projects\Project;
@@ -181,16 +182,18 @@ class Manager
     /**
      * Count the tags in the Project
      *
+     * @param array<string, mixed> $params
      * @return integer
      */
-    public function count(): int
+    public function count(array $params = []): int
     {
         try {
-            return (int)QUI::getDataBaseConnection()->createQueryBuilder()
+            $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
                 ->select('COUNT(' . Doctrine::quoteIdentifier('tag') . ')')
-                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)))
-                ->executeQuery()
-                ->fetchOne();
+                ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)));
+            $this->applyListSearch($QueryBuilder, $params);
+
+            return (int)$QueryBuilder->executeQuery()->fetchOne();
         } catch (\Exception $Exception) {
             QUI\System\Log::writeDebugException($Exception);
             QUI\System\Log::addError($Exception->getMessage());
@@ -642,6 +645,7 @@ class Manager
         $QueryBuilder = QUI::getDataBaseConnection()->createQueryBuilder()
             ->select('*')
             ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)));
+        $this->applyListSearch($QueryBuilder, $params);
         $sortOn = $params['sortOn'] ?? 'tag';
         $allowedSortColumns = ['tag', 'title', 'url', 'generated', 'generator'];
 
@@ -706,6 +710,30 @@ class Manager
         }
 
         return $result;
+    }
+
+    /**
+     * Apply the same search to the result rows and their pagination count.
+     *
+     * @param array<string, mixed> $params
+     */
+    private function applyListSearch(QueryBuilder $QueryBuilder, array $params): void
+    {
+        $search = $params['search'] ?? '';
+
+        if (!is_string($search) || trim($search) === '') {
+            return;
+        }
+
+        $conditions = [];
+
+        foreach (['tag', 'title', 'desc'] as $column) {
+            $conditions[] = 'LOWER(' . Doctrine::quoteIdentifier($column) . ") LIKE :tagSearch ESCAPE '!'";
+        }
+
+        $search = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($search)));
+        $QueryBuilder->andWhere('(' . implode(' OR ', $conditions) . ')')
+            ->setParameter('tagSearch', '%' . $search . '%');
     }
 
     /**
@@ -1138,51 +1166,44 @@ class Manager
             ? []
             : array_values(array_filter(explode(',', (string)$storedTags)));
 
+        $serializedTags = ',' . implode(',', $list) . ',';
+
         if ($storedTags === false) {
             $Connection->insert(Doctrine::quoteIdentifier($table), [
-                'id' => $siteId
+                'id' => $siteId,
+                'tags' => $serializedTags
             ]);
+        } elseif ($storedTags !== $serializedTags) {
+            $Connection->update(
+                Doctrine::quoteIdentifier($table),
+                ['tags' => $serializedTags],
+                ['id' => $siteId]
+            );
         }
-
-        $Connection->update(
-            Doctrine::quoteIdentifier($table),
-            ['tags' => ',' . implode(',', $list) . ','],
-            ['id' => $siteId]
-        );
 
         self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . $siteId] = $list;
         $this->clearSiteIdsFromTagsRequestCache();
 
         $removedTags = array_diff($previousTags, $list);
 
-        if (!empty($removedTags)) {
-            $this->removeSiteFromTags($siteId, $removedTags);
-        }
-
-        // if side is not active, don't generate the cache
+        // Deactivation must remove both previously assigned and currently selected tags.
         if (!$isActive) {
-            $this->removeSiteFromTags($siteId, $list);
+            $this->removeSiteFromTags($siteId, array_values(array_unique([...$removedTags, ...$list])));
 
             return;
         }
 
+        if (!empty($removedTags)) {
+            $this->removeSiteFromTags($siteId, $removedTags);
+        }
+
         $tableTagCache = QUI::getDBProjectTableName('tags_cache', $this->Project);
 
-        // update cache of tags
-        foreach ($list as $tag) {
-            $result = $Connection->createQueryBuilder()
-                ->select(
-                    Doctrine::quoteIdentifier('sites'),
-                    Doctrine::quoteIdentifier('count')
-                )
-                ->from(Doctrine::quoteIdentifier($tableTagCache))
-                ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
-                ->setParameter('tag', $tag)
-                ->setMaxResults(1)
-                ->executeQuery()
-                ->fetchAssociative();
+        // Read all affected entries once, including missing cache rows that need repair.
+        foreach ($this->getSiteTagCacheRows($list) as $result) {
+            $tag = $result['tag'];
 
-            if ($result === false) {
+            if ($result['cacheTag'] === null) {
                 $Connection->insert(Doctrine::quoteIdentifier($tableTagCache), [
                     'tag' => $tag,
                     'sites' => ',' . $siteId . ',',
@@ -1215,6 +1236,39 @@ class Manager
                 ['tag' => $tag]
             );
         }
+    }
+
+    /**
+     * @param array<int, string> $tags
+     * @return list<array<string, mixed>>
+     */
+    protected function getSiteTagCacheRows(array $tags): array
+    {
+        if ($tags === []) {
+            return [];
+        }
+
+        $tag = Doctrine::quoteIdentifier('tag');
+        $sites = Doctrine::quoteIdentifier('sites');
+
+        // Let the database match tag names using its collation, also when their casing differs.
+        return QUI::getDataBaseConnection()->createQueryBuilder()
+            ->select(
+                'definitions.' . $tag,
+                'cache.' . $tag . ' AS ' . Doctrine::quoteIdentifier('cacheTag'),
+                'cache.' . $sites
+            )
+            ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)), 'definitions')
+            ->leftJoin(
+                'definitions',
+                Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags_cache', $this->Project)),
+                'cache',
+                'definitions.' . $tag . ' = cache.' . $tag
+            )
+            ->where('definitions.' . $tag . ' IN (:tags)')
+            ->setParameter('tags', array_values(array_unique($tags)), ArrayParameterType::STRING)
+            ->executeQuery()
+            ->fetchAllAssociative();
     }
 
     /**
@@ -1251,27 +1305,20 @@ class Manager
 
         $Connection = QUI::getDataBaseConnection();
 
-        // update cache of tags
-        foreach ($list as $tag) {
-            try {
-                $result = $Connection->createQueryBuilder()
-                    ->select(Doctrine::quoteIdentifier('sites'))
-                    ->from(Doctrine::quoteIdentifier($tableTagCache))
-                    ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
-                    ->setParameter('tag', $tag)
-                    ->setMaxResults(1)
-                    ->executeQuery()
-                    ->fetchAssociative();
-            } catch (\Exception $Exception) {
-                QUI\System\Log::addError($Exception->getMessage());
+        try {
+            $entries = $this->getSiteTagCacheRows($list);
+        } catch (\Exception $Exception) {
+            QUI\System\Log::addError($Exception->getMessage());
 
+            return;
+        }
+
+        foreach ($entries as $result) {
+            if ($result['cacheTag'] === null) {
                 continue;
             }
 
-            if ($result === false) {
-                continue;
-            }
-
+            $tag = $result['tag'];
             $siteIds = trim($result['sites'] ?? '', ',');
 
             if (empty($siteIds)) {
