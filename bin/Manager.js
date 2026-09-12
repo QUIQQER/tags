@@ -131,7 +131,7 @@ define('package/quiqqer/tags/bin/Manager', [
             this.$SearchInput = document.createElement('input');
             this.$SearchInput.type = 'search';
             this.$SearchInput.dataset.name = 'tag-search';
-            this.$SearchInput.placeholder = QUILocale.get('quiqqer/core', 'search');
+            this.$SearchInput.placeholder = QUILocale.get('quiqqer/core', 'search') + '…';
             this.$SearchInput.setAttribute('aria-label', QUILocale.get('quiqqer/core', 'search'));
             this.$SearchInput.disabled = true;
             Search.appendChild(this.$SearchInput);
@@ -140,7 +140,12 @@ define('package/quiqqer/tags/bin/Manager', [
             this.$SearchButton.type = 'submit';
             this.$SearchButton.className = 'qui-button';
             this.$SearchButton.dataset.name = 'search-submit';
-            this.$SearchButton.textContent = QUILocale.get('quiqqer/core', 'search');
+            this.$SearchButton.setAttribute('aria-label', QUILocale.get('quiqqer/core', 'search'));
+            this.$SearchButton.title = QUILocale.get('quiqqer/core', 'search');
+            const SearchIcon = document.createElement('span');
+            SearchIcon.className = 'fa fa-search';
+            SearchIcon.setAttribute('aria-hidden', 'true');
+            this.$SearchButton.appendChild(SearchIcon);
             this.$SearchButton.disabled = true;
             Search.appendChild(this.$SearchButton);
 
