@@ -23,6 +23,7 @@
     {foreach $tagList as $tag}
     <a href="{url site=$SearchSite _get__tags=$tag.tag}"
        class="qui-tags-tag"
+       rel="nofollow"
     >
         {if $tag.title}
             {$tag.title}

@@ -38,7 +38,7 @@
                 {array_sort var=$params assign=params}
                 {assign var=params value=implode('-', $params)}
 
-                <a href="{url site=$Site _get__tags=$params}" class="qui-tags-tag">
+                <a href="{url site=$Site _get__tags=$params}" class="qui-tags-tag" rel="nofollow">
                     <span class="fa fa-minus"></span>
                     {$requestTag.title}
                 </a>
@@ -95,7 +95,7 @@
                             {array_sort var=$params assign=params}
                             {assign var=params value=implode('-', $params)}
 
-                        <a href="{url site=$Site _get__tags=$params}" class="qui-tags-tag animated">
+                        <a href="{url site=$Site _get__tags=$params}" class="qui-tags-tag animated" rel="nofollow">
                             {$tag.title}
                         </a>
                         {/if}
