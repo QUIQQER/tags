@@ -6,6 +6,8 @@ namespace QUITests\Tags;
 
 require_once __DIR__ . '/SiteTagsTestProxy.php';
 
+use DOMDocument;
+use DOMXPath;
 use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
@@ -50,6 +52,67 @@ class ControlsAndEventsTest extends TestCase
 
         self::assertArrayHasKey('array_search', $Smarty->registered_plugins['modifier']);
         self::assertArrayHasKey('implode', $Smarty->registered_plugins['modifier']);
+    }
+
+    public function testSearchTemplateMarksTagSelectionLinksAsNofollow(): void
+    {
+        $originalGet = $_GET;
+        $Site = $this->createMock(Site::class);
+        $Site->method('getAttribute')->willReturnCallback(
+            static fn(string $name): bool => in_array($name, [
+                'quiqqer.tag.settings.showSelectedTags',
+                'quiqqer.tag.settings.showAvailableTags'
+            ], true)
+        );
+        $Engine = QUI::getTemplateManager()->getEngine();
+        $Engine->assign([
+            'Site' => $Site,
+            'Template' => $this->createMock(QUI\Template::class),
+            'requestTagNames' => ['AlphaTag'],
+            'requestTags' => [['tag' => 'AlphaTag', 'title' => 'Alpha']],
+            'tags' => [
+                ['tag' => 'AlphaTag', 'title' => 'Alpha'],
+                ['tag' => 'BetaTag', 'title' => 'Beta']
+            ],
+            'result' => [],
+            'count' => 0
+        ]);
+
+        try {
+            $_GET = ['tags' => 'AlphaTag'];
+            $html = $Engine->fetch(dirname(__DIR__, 3) . '/types/tag-search.html');
+        } finally {
+            $_GET = $originalGet;
+        }
+
+        $Document = new DOMDocument();
+        $Document->loadHTML($html, LIBXML_NOERROR);
+        $Links = (new DOMXPath($Document))->query('//a[contains(@class, "qui-tags-tag")]');
+
+        self::assertNotFalse($Links);
+        self::assertCount(2, $Links);
+
+        foreach ($Links as $Link) {
+            self::assertSame('nofollow', $Link->attributes->getNamedItem('rel')?->nodeValue);
+        }
+    }
+
+    public function testTagMenuMarksSearchLinksAsNofollow(): void
+    {
+        $Engine = QUI::getTemplateManager()->getEngine();
+        $Engine->assign([
+            'tags' => [['tag' => 'AlphaTag', 'title' => 'Alpha']],
+            'selectedTags' => [],
+            'tagSearchUrl' => '/tag-search'
+        ]);
+        $html = $Engine->fetch(dirname(__DIR__, 3) . '/src/QUI/Tags/Controls/TagMenu.Children.html');
+        $Document = new DOMDocument();
+        $Document->loadHTML($html);
+        $Links = (new DOMXPath($Document))->query('//a[@href="/tag-search?tags=AlphaTag"]');
+
+        self::assertNotFalse($Links);
+        self::assertCount(1, $Links);
+        self::assertSame('nofollow', $Links->item(0)?->attributes->getNamedItem('rel')?->nodeValue);
     }
 
     public function testWatchCreatesTextsForTagOperationsAndFallback(): void

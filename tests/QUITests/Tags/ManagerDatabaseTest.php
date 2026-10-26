@@ -9,6 +9,9 @@ require_once __DIR__ . '/ManagerDatabaseTestManager.php';
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\Schema;
+use DOMDocument;
+use DOMXPath;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Interfaces\Users\User;
@@ -397,7 +400,70 @@ class ManagerDatabaseTest extends TestCase
         $this->Manager->setSiteTags(20, ['AlphaTag', 'BetaTag']);
         $Control = new SiteTags(['Site' => $this->Sites[20]]);
 
-        self::assertNotSame('', $Control->getBody());
+        $Document = new DOMDocument();
+        $Document->loadHTML($Control->getBody());
+        $Links = (new DOMXPath($Document))->query('//a');
+
+        self::assertNotFalse($Links);
+        self::assertCount(2, $Links);
+
+        foreach ($Links as $Link) {
+            self::assertSame('nofollow', $Link->attributes->getNamedItem('rel')?->nodeValue);
+        }
+    }
+
+    #[DataProvider('tagSearchRequests')]
+    public function testTagSearchSetsRobotsForEffectiveTagSelection(
+        ?string $queryTags,
+        string $requestUrl,
+        string $defaultTags,
+        string $expectedRobots
+    ): void {
+        $originalGet = $_GET;
+        $originalRequest = $_REQUEST;
+        $Project = $this->Project;
+        $Site = $this->getMockBuilder(Site::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getProject'])
+            ->getMock();
+        $Site->method('getProject')->willReturn($Project);
+        $Site->setAttributes([
+            'quiqqer.settings.results.types' => '',
+            'quiqqer.tag.settings.limit' => 10,
+            'quiqqer.tag.settings.defaultTags' => $defaultTags,
+            'meta.robots' => $expectedRobots === 'index, follow' ? 'noindex, follow' : 'index, follow'
+        ]);
+        $Engine = $this->createMock(QUI\Interfaces\Template\EngineInterface::class);
+
+        try {
+            $_GET = $queryTags === null ? [] : ['tags' => $queryTags];
+            $_REQUEST = ['_url' => $requestUrl];
+
+            include dirname(__DIR__, 3) . '/types/tag-search.php';
+
+            self::assertSame($expectedRobots, $Site->getAttribute('meta.robots'));
+        } finally {
+            $_GET = $originalGet;
+            $_REQUEST = $originalRequest;
+        }
+    }
+
+    /**
+     * @return array<string, array{?string, string, string, string}>
+     */
+    public static function tagSearchRequests(): array
+    {
+        return [
+            'unfiltered search' => [null, '/tags.html', '', 'index, follow'],
+            'empty query' => ['', '/tags.html', '', 'index, follow'],
+            'one query tag' => ['GammaTag', '/tags.html', '', 'noindex, follow'],
+            'multiple query tags' => ['AlphaTag-BetaTag', '/tags.html', '', 'noindex, follow'],
+            'rewritten tag' => [null, '/tags_GammaTag.html', '', 'noindex, follow'],
+            'default tag' => [null, '/tags.html', 'GammaTag', 'noindex, follow'],
+            'unknown tag' => ['MissingTag', '/tags.html', '', 'index, follow'],
+            'unknown default tag' => [null, '/tags.html', 'MissingTag', 'index, follow'],
+            'fallback to default tag' => ['MissingTag', '/tags.html', 'GammaTag', 'noindex, follow']
+        ];
     }
 
     public function testHandlesMissingTagsAndNoOpSiteAssignmentChanges(): void
