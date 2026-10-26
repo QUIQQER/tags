@@ -89,6 +89,8 @@ if (
     }
 }
 
+$Site->setAttribute('meta.robots', empty($requestTags) ? 'index, follow' : 'noindex, follow');
+
 $Engine->assign([
     'requestTags' => $requestTags,
     'requestTagNames' => $requestTagNames
