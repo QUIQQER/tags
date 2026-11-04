@@ -20,18 +20,27 @@ $types = explode(';', $types);
  * Pagination
  */
 
+$limit = filter_var(
+    $Site->getAttribute('quiqqer.tag.settings.limit'),
+    FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 1]]
+);
+
+if ($limit === false) {
+    $limit = 10;
+}
+
 $Pagination = new QUI\Bricks\Controls\Pagination([
     'Site' => $Site,
-    'showLimit' => true,
-    'limit' => $Site->getAttribute('quiqqer.tag.settings.limit')
+    'showLimit' => false,
+    'limit' => $limit
 ]);
 
 $Pagination->loadFromRequest();
 
-$Pagination->setGetParams(
-    'limit',
-    $Site->getAttribute('quiqqer.tag.settings.limit')
-);
+// The page configuration is authoritative; request parameters only select the page.
+$Pagination->setAttribute('limit', $limit);
+$Pagination->setGetParams('limit', $limit);
 
 
 /**

@@ -224,6 +224,85 @@ class ManagerDatabaseTest extends TestCase
         }
     }
 
+    /**
+     * @param array<string, mixed> $request
+     * @param list<int> $expectedIds
+     */
+    #[DataProvider('searchPageLimitProvider')]
+    public function testSearchPageAlwaysUsesConfiguredLimit(
+        mixed $configuredLimit,
+        array $request,
+        int $expectedLimit,
+        int $expectedStart,
+        array $expectedIds
+    ): void {
+        $Project = $this->Project;
+        $Site = $this->createMock(Site::class);
+        $Site->method('getAttribute')->willReturnCallback(
+            static fn(string $name): mixed => match ($name) {
+                'quiqqer.tag.settings.limit' => $configuredLimit,
+                'quiqqer.settings.results.types' => '',
+                default => false
+            }
+        );
+
+        foreach ([10, 11] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $Engine = QUI::getTemplateManager()->getEngine();
+        $originalGet = $_GET;
+        $originalRequest = $_REQUEST;
+
+        try {
+            $_GET = ['tags' => 'AlphaTag'] + $request;
+            $_REQUEST = [];
+            require dirname(__DIR__, 3) . '/types/tag-search.php';
+
+            $Pagination = $Engine->getTemplateVariable('Pagination');
+            self::assertSame($expectedLimit, $Pagination->getAttribute('limit'));
+            self::assertFalse($Pagination->getAttribute('showLimit'));
+            self::assertSame($expectedStart, $Pagination->getStart());
+            self::assertSame($expectedLimit, $Engine->getTemplateVariable('max'));
+            self::assertSame(
+                $expectedIds,
+                array_map(
+                    static fn(Site $Entry): int => $Entry->getId(),
+                    $Engine->getTemplateVariable('result')
+                )
+            );
+        } finally {
+            $_GET = $originalGet;
+            $_REQUEST = $originalRequest;
+        }
+    }
+
+    /**
+     * @return iterable<string, array{mixed, array<string, mixed>, int, int, list<int>}>
+     */
+    public static function searchPageLimitProvider(): iterable
+    {
+        yield 'configured first page' => [1, [], 1, 0, [10]];
+        yield 'large URL limit' => [1, ['limit' => '1000000'], 1, 0, [10]];
+        yield 'negative URL limit' => [1, ['limit' => '-1'], 1, 0, [10]];
+        yield 'zero URL limit' => [1, ['limit' => '0'], 1, 0, [10]];
+        yield 'invalid URL limit' => [1, ['limit' => 'invalid'], 1, 0, [10]];
+        yield 'array URL limit' => [1, ['limit' => ['1000']], 1, 0, [10]];
+        yield 'second sheet' => [1, [
+            'limit' => '1000000',
+            'sheet' => '2'
+        ], 1, 1, [11]];
+        yield 'second page alias' => [1, [
+            'limit' => '-1',
+            'page' => '2'
+        ], 1, 1, [11]];
+        yield 'configured numeric string' => ['1', ['limit' => '50'], 1, 0, [10]];
+        yield 'larger configured limit' => [25, ['limit' => '1'], 25, 0, [10, 11]];
+        yield 'invalid configured limit' => [0, ['limit' => '1000'], 10, 0, [10, 11]];
+        yield 'negative configured limit' => [-1, [], 10, 0, [10, 11]];
+        yield 'missing configured limit' => [null, [], 10, 0, [10, 11]];
+    }
+
     public function testTagChangesInvalidateAvailableSearchTags(): void
     {
         $Search = new Search($this->Project);
