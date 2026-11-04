@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace QUITests\Tags;
 
 require_once __DIR__ . '/ManagerDatabaseTestManager.php';
+require_once __DIR__ . '/SqlQueryCounter.php';
 
+use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Logging\Middleware;
 use Doctrine\DBAL\Schema\Schema;
 use DOMDocument;
 use DOMXPath;
@@ -21,6 +24,7 @@ use QUI\Projects\Site;
 use QUI\Projects\Site\Edit;
 use QUI\Tags\Controls\SiteTags;
 use QUI\Tags\Manager;
+use QUI\Tags\Search;
 use ReflectionProperty;
 
 class ManagerDatabaseTest extends TestCase
@@ -28,6 +32,7 @@ class ManagerDatabaseTest extends TestCase
     private Connection $originalConnection;
     private ?User $originalPermissionUser;
     private Connection $connection;
+    private SqlQueryCounter $counter;
     private Project $Project;
     private ManagerDatabaseTestManager $Manager;
     private string $tagsTable;
@@ -35,6 +40,7 @@ class ManagerDatabaseTest extends TestCase
     private string $sitesTable;
     private string $siteCacheTable;
     private string $groupsTable;
+    private bool $active = true;
 
     /**
      * @var array<int, Site>
@@ -49,10 +55,13 @@ class ManagerDatabaseTest extends TestCase
         $PermissionUser = new ReflectionProperty(Permission::class, 'User');
         $this->originalPermissionUser = $PermissionUser->getValue();
         Permission::setUser(QUI::getUsers()->getSystemUser());
+        $this->counter = new SqlQueryCounter();
+        $Configuration = new Configuration();
+        $Configuration->setMiddlewares([new Middleware($this->counter)]);
         $this->connection = DriverManager::getConnection([
             'driver' => 'pdo_sqlite',
             'memory' => true
-        ]);
+        ], $Configuration);
         $this->setConnection($this->connection);
         $this->Project = $this->createMock(Project::class);
         $this->Project->method('getName')->willReturn('tagsmanagerphpunit');
@@ -105,9 +114,10 @@ class ManagerDatabaseTest extends TestCase
         ]);
         $SiteEdit = $this->createMock(Edit::class);
         $SiteEdit->method('getAttribute')->willReturnCallback(
-            static fn(string $name): mixed => $name === 'active' ? 1 : null
+            fn(string $name): mixed => $name === 'active' ? $this->active : null
         );
         $this->Manager = new ManagerDatabaseTestManager($this->Project, $SiteEdit);
+        $this->Manager->clearSearchCache();
         $this->resetManagerCaches();
 
         foreach (['AlphaTag', 'BetaTag', 'GammaTag'] as $tag) {
@@ -117,6 +127,7 @@ class ManagerDatabaseTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->Manager->clearSearchCache();
         $this->resetManagerCaches();
         foreach (['AlphaTag', 'BetaTag', 'GammaTag'] as $tag) {
             QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
@@ -127,6 +138,273 @@ class ManagerDatabaseTest extends TestCase
         $PermissionUser->setValue(null, $this->originalPermissionUser);
 
         parent::tearDown();
+    }
+
+    public function testSearchReusesIdsAndCountAcrossRequestsAndPagination(): void
+    {
+        foreach ([10, 11, 12] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $Search = new Search($this->Project, $this->Manager);
+        $first = $Search->getResults(['AlphaTag', 'BetaTag'], ['limit' => '0,1']);
+
+        self::assertSame(3, $first['count']);
+        self::assertSame([$this->Sites[11]], $first['sites']);
+        $this->resetManagerCaches();
+        $this->counter->reset();
+
+        $Search = new Search($this->Project);
+        $second = $Search->getResults(['BetaTag', 'AlphaTag', 'BetaTag'], ['limit' => '1,2']);
+
+        self::assertSame(3, $second['count']);
+        self::assertSame([$this->Sites[10], $this->Sites[12]], $second['sites']);
+        self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testCachedSearchLoadsSitesAgainForTheCurrentVisitor(): void
+    {
+        $this->Sites[10] = $this->createSite(10);
+        $this->Sites[11] = $this->createSite(11);
+        $Search = new Search($this->Project, $this->Manager);
+        self::assertCount(2, $Search->getResults(['AlphaTag'])['sites']);
+
+        unset($this->Sites[10]);
+        $this->Sites[11] = $this->createSite(11);
+        $this->resetManagerCaches();
+        $this->counter->reset();
+        $result = (new Search($this->Project))->getResults(['AlphaTag']);
+
+        self::assertSame(2, $result['count']);
+        self::assertSame([$this->Sites[11]], $result['sites']);
+        self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testAvailableTagsNeedNoCountsAndAreSharedAcrossRequests(): void
+    {
+        $this->connection->executeStatement('DROP TABLE ' . $this->cacheTable);
+        $this->counter->reset();
+        $tags = (new Search($this->Project))->getAvailableTags();
+
+        self::assertSame([
+            ['tag' => 'AlphaTag', 'title' => 'Alpha'],
+            ['tag' => 'BetaTag', 'title' => 'Beta'],
+            ['tag' => 'GammaTag', 'title' => 'Gamma']
+        ], $tags);
+        self::assertSame(1, $this->counter->counts()['SELECT']);
+        $this->counter->reset();
+
+        self::assertSame($tags, (new Search($this->Project))->getAvailableTags());
+        self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testSearchPageSkipsAvailableTagsWhenDisabled(): void
+    {
+        $Project = $this->Project;
+        $Site = $this->createMock(Site::class);
+        $Site->method('getAttribute')->willReturnCallback(
+            static fn(string $name): mixed => match ($name) {
+                'quiqqer.tag.settings.limit' => 10,
+                'quiqqer.settings.results.types' => '',
+                default => false
+            }
+        );
+        $Engine = QUI::getTemplateManager()->getEngine();
+        $originalGet = $_GET;
+        $this->counter->reset();
+
+        try {
+            $_GET = [];
+            require dirname(__DIR__, 3) . '/types/tag-search.php';
+
+            self::assertSame([], $Engine->getTemplateVariable('tags'));
+            self::assertSame(0, $this->counter->counts()['SELECT']);
+        } finally {
+            $_GET = $originalGet;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $request
+     * @param list<int> $expectedIds
+     */
+    #[DataProvider('searchPageLimitProvider')]
+    public function testSearchPageAlwaysUsesConfiguredLimit(
+        mixed $configuredLimit,
+        array $request,
+        int $expectedLimit,
+        int $expectedStart,
+        array $expectedIds
+    ): void {
+        $Project = $this->Project;
+        $Site = $this->createMock(Site::class);
+        $Site->method('getAttribute')->willReturnCallback(
+            static fn(string $name): mixed => match ($name) {
+                'quiqqer.tag.settings.limit' => $configuredLimit,
+                'quiqqer.settings.results.types' => '',
+                default => false
+            }
+        );
+
+        foreach ([10, 11] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $Engine = QUI::getTemplateManager()->getEngine();
+        $originalGet = $_GET;
+        $originalRequest = $_REQUEST;
+
+        try {
+            $_GET = ['tags' => 'AlphaTag'] + $request;
+            $_REQUEST = [];
+            require dirname(__DIR__, 3) . '/types/tag-search.php';
+
+            $Pagination = $Engine->getTemplateVariable('Pagination');
+            self::assertSame($expectedLimit, $Pagination->getAttribute('limit'));
+            self::assertFalse($Pagination->getAttribute('showLimit'));
+            self::assertSame($expectedStart, $Pagination->getStart());
+            self::assertSame($expectedLimit, $Engine->getTemplateVariable('max'));
+            self::assertSame(
+                $expectedIds,
+                array_map(
+                    static fn(Site $Entry): int => $Entry->getId(),
+                    $Engine->getTemplateVariable('result')
+                )
+            );
+        } finally {
+            $_GET = $originalGet;
+            $_REQUEST = $originalRequest;
+        }
+    }
+
+    /**
+     * @return iterable<string, array{mixed, array<string, mixed>, int, int, list<int>}>
+     */
+    public static function searchPageLimitProvider(): iterable
+    {
+        yield 'configured first page' => [1, [], 1, 0, [10]];
+        yield 'large URL limit' => [1, ['limit' => '1000000'], 1, 0, [10]];
+        yield 'negative URL limit' => [1, ['limit' => '-1'], 1, 0, [10]];
+        yield 'zero URL limit' => [1, ['limit' => '0'], 1, 0, [10]];
+        yield 'invalid URL limit' => [1, ['limit' => 'invalid'], 1, 0, [10]];
+        yield 'array URL limit' => [1, ['limit' => ['1000']], 1, 0, [10]];
+        yield 'second sheet' => [1, [
+            'limit' => '1000000',
+            'sheet' => '2'
+        ], 1, 1, [11]];
+        yield 'second page alias' => [1, [
+            'limit' => '-1',
+            'page' => '2'
+        ], 1, 1, [11]];
+        yield 'configured numeric string' => ['1', ['limit' => '50'], 1, 0, [10]];
+        yield 'larger configured limit' => [25, ['limit' => '1'], 25, 0, [10, 11]];
+        yield 'invalid configured limit' => [0, ['limit' => '1000'], 10, 0, [10, 11]];
+        yield 'negative configured limit' => [-1, [], 10, 0, [10, 11]];
+        yield 'missing configured limit' => [null, [], 10, 0, [10, 11]];
+    }
+
+    public function testTagChangesInvalidateAvailableSearchTags(): void
+    {
+        $Search = new Search($this->Project);
+        self::assertSame('Alpha', $Search->getAvailableTags()[0]['title']);
+
+        $this->Manager->edit('AlphaTag', ['title' => 'Updated alpha']);
+
+        self::assertSame('Updated alpha', $Search->getAvailableTags()[0]['title']);
+        $this->Manager->add('Delta', []);
+        self::assertCount(4, $Search->getAvailableTags());
+        $this->Manager->deleteTag('Delta');
+        self::assertCount(3, $Search->getAvailableTags());
+    }
+
+    public function testAssignmentAndRemovalInvalidateSharedSearchResults(): void
+    {
+        foreach ([10, 11, 20] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $Search = new Search($this->Project, $this->Manager);
+        self::assertSame(2, $Search->getResults(['AlphaTag'])['count']);
+        $this->Manager->setSiteTags(20, ['AlphaTag']);
+        $result = $Search->getResults(['AlphaTag']);
+
+        self::assertSame(3, $result['count']);
+        self::assertContains($this->Sites[20], $result['sites']);
+        $this->Manager->removeSiteFromTags(20, ['AlphaTag']);
+        $result = $Search->getResults(['AlphaTag']);
+
+        self::assertSame(2, $result['count']);
+        self::assertNotContains($this->Sites[20], $result['sites']);
+    }
+
+    public function testDeactivationInvalidatesSharedSearchResults(): void
+    {
+        foreach ([10, 11, 20] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $this->Manager->setSiteTags(20, ['AlphaTag']);
+        $Search = new Search($this->Project, $this->Manager);
+        self::assertSame(3, $Search->getResults(['AlphaTag'])['count']);
+
+        $this->active = false;
+        $this->Manager->setSiteTags(20, ['AlphaTag']);
+        $result = $Search->getResults(['AlphaTag']);
+
+        self::assertSame(2, $result['count']);
+        self::assertNotContains($this->Sites[20], $result['sites']);
+    }
+
+    public function testSearchCacheIsIsolatedByProjectAndLanguage(): void
+    {
+        $this->Sites[10] = $this->createSite(10);
+        $this->Sites[11] = $this->createSite(11);
+        self::assertSame(2, (new Search($this->Project, $this->Manager))->getResults(['AlphaTag'])['count']);
+
+        foreach ([['otherproject', 'en'], ['tagsmanagerphpunit', 'de']] as [$name, $lang]) {
+            $Project = $this->createMock(Project::class);
+            $Project->method('getName')->willReturn($name);
+            $Project->method('getLang')->willReturn($lang);
+            $Manager = $this->createMock(Manager::class);
+            $Manager->expects(self::once())->method('getSiteCountFromTags')->willReturn(0);
+            $Manager->expects(self::once())->method('getSiteIdsFromTags')->willReturn([]);
+            Search::invalidate($Project);
+
+            self::assertSame(['count' => 0, 'sites' => []], (new Search($Project, $Manager))->getResults(['AlphaTag']));
+        }
+    }
+
+    public function testInvalidationDuringSearchDoesNotPublishOldResultsToNewGeneration(): void
+    {
+        $Manager = $this->createMock(Manager::class);
+        $Manager->expects(self::exactly(2))->method('getSiteCountFromTags')->willReturn(0);
+        $Manager->expects(self::exactly(2))->method('getSiteIdsFromTags')->willReturnCallback(
+            function (): array {
+                Search::invalidate($this->Project);
+
+                return [];
+            }
+        );
+        $Search = new Search($this->Project, $Manager);
+
+        self::assertSame(['count' => 0, 'sites' => []], $Search->getResults(['AlphaTag']));
+        self::assertSame(['count' => 0, 'sites' => []], $Search->getResults(['AlphaTag']));
+    }
+
+    public function testEmptySearchResultsAreSharedAcrossRequests(): void
+    {
+        $Manager = $this->createMock(Manager::class);
+        $Manager->expects(self::once())->method('getSiteCountFromTags')->willReturn(0);
+        $Manager->expects(self::once())->method('getSiteIdsFromTags')->willReturn([]);
+
+        self::assertSame(
+            ['count' => 0, 'sites' => []],
+            (new Search($this->Project, $Manager))->getResults(['GammaTag'])
+        );
+        self::assertSame(
+            ['count' => 0, 'sites' => []],
+            (new Search($this->Project, $Manager))->getResults(['GammaTag'])
+        );
     }
 
     public function testCountsAndChecksExistingTags(): void
