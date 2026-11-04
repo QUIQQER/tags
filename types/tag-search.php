@@ -20,18 +20,27 @@ $types = explode(';', $types);
  * Pagination
  */
 
+$limit = filter_var(
+    $Site->getAttribute('quiqqer.tag.settings.limit'),
+    FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 1]]
+);
+
+if ($limit === false) {
+    $limit = 10;
+}
+
 $Pagination = new QUI\Bricks\Controls\Pagination([
     'Site' => $Site,
-    'showLimit' => true,
-    'limit' => $Site->getAttribute('quiqqer.tag.settings.limit')
+    'showLimit' => false,
+    'limit' => $limit
 ]);
 
 $Pagination->loadFromRequest();
 
-$Pagination->setGetParams(
-    'limit',
-    $Site->getAttribute('quiqqer.tag.settings.limit')
-);
+// The page configuration is authoritative; request parameters only select the page.
+$Pagination->setAttribute('limit', $limit);
+$Pagination->setGetParams('limit', $limit);
 
 
 /**
@@ -39,18 +48,18 @@ $Pagination->setGetParams(
  */
 
 $Manager = new QUI\Tags\Manager($Project);
+$Search = new QUI\Tags\Search($Project, $Manager);
+$availableTags = [];
 
-try {
-    $tags = $Manager->getList([
-        'limit' => 0
-    ]);
-
-    $Engine->assign([
-        'tags' => $tags
-    ]);
-} catch (QUI\Exception $Exception) {
+if ($Site->getAttribute('quiqqer.tag.settings.showAvailableTags')) {
+    try {
+        $availableTags = $Search->getAvailableTags();
+    } catch (\Exception $Exception) {
+        QUI\System\Log::writeDebugException($Exception);
+    }
 }
 
+$Engine->assign('tags', $availableTags);
 
 /**
  * Requested tags
@@ -117,10 +126,11 @@ if (!empty($requestTags)) {
         $sqlParams['limit'] = 10;
     }
 
-    $count = $Manager->getSiteCountFromTags($tags);
-    $result = $Manager->getSitesFromTags($tags, [
+    $searchResult = $Search->getResults($tags, [
         'limit' => $sqlParams['limit']
     ]);
+    $count = $searchResult['count'];
+    $result = $searchResult['sites'];
 }
 
 if ($Pagination->getAttribute('limit')) {
