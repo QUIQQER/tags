@@ -6,6 +6,7 @@ namespace QUITests\Tags;
 
 require_once __DIR__ . '/ManagerDatabaseTestManager.php';
 require_once __DIR__ . '/SqlQueryCounter.php';
+require_once __DIR__ . '/SearchCacheDriver.php';
 
 use Doctrine\DBAL\Configuration;
 use Doctrine\DBAL\Connection;
@@ -26,6 +27,7 @@ use QUI\Tags\Controls\SiteTags;
 use QUI\Tags\Manager;
 use QUI\Tags\Search;
 use ReflectionProperty;
+use Stash\Pool;
 
 class ManagerDatabaseTest extends TestCase
 {
@@ -33,6 +35,8 @@ class ManagerDatabaseTest extends TestCase
     private ?User $originalPermissionUser;
     private Connection $connection;
     private SqlQueryCounter $counter;
+    private ?Pool $originalCachePool;
+    private SearchCacheDriver $cacheDriver;
     private Project $Project;
     private ManagerDatabaseTestManager $Manager;
     private string $tagsTable;
@@ -117,6 +121,9 @@ class ManagerDatabaseTest extends TestCase
             fn(string $name): mixed => $name === 'active' ? $this->active : null
         );
         $this->Manager = new ManagerDatabaseTestManager($this->Project, $SiteEdit);
+        $this->originalCachePool = QUI\Cache\Manager::$Stash;
+        $this->cacheDriver = new SearchCacheDriver();
+        QUI\Cache\Manager::$Stash = new Pool($this->cacheDriver);
         $this->Manager->clearSearchCache();
         $this->resetManagerCaches();
 
@@ -133,6 +140,7 @@ class ManagerDatabaseTest extends TestCase
             QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
         }
 
+        QUI\Cache\Manager::$Stash = $this->originalCachePool;
         $this->setConnection($this->originalConnection);
         $PermissionUser = new ReflectionProperty(Permission::class, 'User');
         $PermissionUser->setValue(null, $this->originalPermissionUser);
@@ -253,6 +261,92 @@ class ManagerDatabaseTest extends TestCase
 
         self::assertSame($tags, (new Search($this->Project))->getAvailableTags());
         self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testSearchDataRemainsCachedBeyondFiveMinutes(): void
+    {
+        $this->Sites[10] = $this->createSite(10);
+        $this->Sites[11] = $this->createSite(11);
+        $Search = new Search($this->Project);
+        $expectedResult = $Search->getResults(['AlphaTag']);
+        $expectedTags = $Search->getAvailableTags();
+        $this->cacheDriver->advanceTime(3600);
+        $this->resetManagerCaches();
+        $this->counter->reset();
+
+        $Search = new Search($this->Project);
+
+        self::assertSame($expectedResult, $Search->getResults(['AlphaTag']));
+        self::assertSame($expectedTags, $Search->getAvailableTags());
+        self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testVersionChangesReuseTheSameCacheKeys(): void
+    {
+        $Search = new Search($this->Project);
+        $Search->getResults(['AlphaTag', 'BetaTag']);
+        $Search->getAvailableTags();
+        $expectedKeys = $this->cacheDriver->getKeys();
+
+        for ($version = 0; $version < 3; $version++) {
+            $this->Manager->clearSearchCache();
+            $Search->getResults(['AlphaTag', 'BetaTag']);
+            $Search->getAvailableTags();
+
+            self::assertSame($expectedKeys, $this->cacheDriver->getKeys());
+        }
+    }
+
+    public function testLateAssignmentWriteWithOldVersionIsRejected(): void
+    {
+        foreach ([10, 11, 20] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $Search = new Search($this->Project);
+        $cacheKey = $this->getSearchCacheKey('tag-sites/' . hash('sha256', 'AlphaTag'));
+        self::assertSame(2, $Search->getResults(['AlphaTag'])['count']);
+        $oldEntry = QUI\Cache\Manager::get($cacheKey);
+        $this->Manager->setSiteTags(20, ['AlphaTag']);
+        self::assertSame(3, $Search->getResults(['AlphaTag'])['count']);
+
+        // Simulate an older request overwriting the newly populated entry after invalidation.
+        QUI\Cache\Manager::set($cacheKey, $oldEntry);
+        $this->counter->reset();
+        $result = (new Search($this->Project))->getResults(['AlphaTag']);
+
+        self::assertSame(3, $result['count']);
+        self::assertContains($this->Sites[20], $result['sites']);
+        self::assertSame(1, $this->counter->counts()['SELECT']);
+    }
+
+    public function testLateAvailableTagsWriteWithOldVersionIsRejected(): void
+    {
+        $Search = new Search($this->Project);
+        $cacheKey = $this->getSearchCacheKey('available');
+        self::assertSame('Alpha', $Search->getAvailableTags()[0]['title']);
+        $oldEntry = QUI\Cache\Manager::get($cacheKey);
+        $this->Manager->edit('AlphaTag', ['title' => 'Updated alpha']);
+        self::assertSame('Updated alpha', $Search->getAvailableTags()[0]['title']);
+
+        QUI\Cache\Manager::set($cacheKey, $oldEntry);
+        $this->counter->reset();
+
+        self::assertSame('Updated alpha', (new Search($this->Project))->getAvailableTags()[0]['title']);
+        self::assertSame(1, $this->counter->counts()['SELECT']);
+    }
+
+    public function testDeletingTagRemovesItsCachedAssignments(): void
+    {
+        (new Search($this->Project))->getResults(['BetaTag']);
+        $cacheKey = $this->getSearchCacheKey('tag-sites/' . hash('sha256', 'BetaTag'));
+        self::assertIsArray(QUI\Cache\Manager::get($cacheKey));
+
+        $this->Manager->deleteTag('BetaTag');
+        $Item = QUI\Cache\Manager::getStash($cacheKey);
+        $Item->get();
+
+        self::assertTrue($Item->isMiss());
     }
 
     public function testSearchPageSkipsAvailableTagsWhenDisabled(): void
@@ -912,5 +1006,11 @@ class ManagerDatabaseTest extends TestCase
             $Property = new ReflectionProperty(Manager::class, $propertyName);
             $Property->setValue(null, []);
         }
+    }
+
+    private function getSearchCacheKey(string $suffix): string
+    {
+        return Project::getProjectLanguageCachePath($this->Project->getName(), $this->Project->getLang())
+            . '/tags/search/data/' . $suffix;
     }
 }

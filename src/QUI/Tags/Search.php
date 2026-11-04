@@ -16,6 +16,8 @@ use function bin2hex;
 use function count;
 use function explode;
 use function hash;
+use function is_array;
+use function is_string;
 use function random_bytes;
 use function sort;
 use function str_contains;
@@ -25,8 +27,6 @@ use function str_contains;
  */
 class Search
 {
-    private const CACHE_LIFETIME = 300;
-
     private Manager $Manager;
 
     public function __construct(private readonly Project $Project, ?Manager $Manager = null)
@@ -39,11 +39,12 @@ class Search
      */
     public function getAvailableTags(): array
     {
-        $cacheKey = $this->getCacheNamespace() . '/available';
+        $generation = $this->getGeneration();
+        $cacheKey = self::getCachePath($this->Project) . '/data/available';
+        $tags = $this->getCachedData($cacheKey, $generation);
 
-        try {
-            return Cache::get($cacheKey);
-        } catch (QUI\Exception) {
+        if ($tags !== null) {
+            return $tags;
         }
 
         $tags = QUI::getDataBaseConnection()->createQueryBuilder()
@@ -56,7 +57,7 @@ class Search
             ->executeQuery()
             ->fetchAllAssociative();
 
-        Cache::set($cacheKey, $tags, self::CACHE_LIFETIME);
+        $this->storeCachedData($cacheKey, $generation, $tags);
 
         return $tags;
     }
@@ -138,15 +139,18 @@ class Search
      */
     private function getTagAssignments(array $tags): array
     {
-        $cacheNamespace = $this->getCacheNamespace() . '/tag-sites/';
+        $generation = $this->getGeneration();
+        $cacheNamespace = self::getCachePath($this->Project) . '/data/tag-sites/';
         $assignments = [];
         $missingTags = [];
 
         foreach ($tags as $tag) {
-            try {
-                $assignments[$tag] = Cache::get($cacheNamespace . hash('sha256', $tag));
-            } catch (QUI\Exception) {
+            $data = $this->getCachedData($cacheNamespace . hash('sha256', $tag), $generation);
+
+            if ($data === null) {
                 $missingTags[] = $tag;
+            } else {
+                $assignments[$tag] = $data;
             }
         }
 
@@ -179,33 +183,69 @@ class Search
                 'siteIds' => []
             ];
 
-            Cache::set($cacheNamespace . hash('sha256', $tag), $assignments[$tag], self::CACHE_LIFETIME);
+            $this->storeCachedData($cacheNamespace . hash('sha256', $tag), $generation, $assignments[$tag]);
         }
 
         return $assignments;
     }
 
     /**
-     * Change generations so an in-flight search cannot republish invalidated results.
-     * Older generations expire automatically.
+     * Change the version checked on every read. Entries retain their fixed keys.
+     * Late writes from older requests remain recognizable as invalid.
      */
     public static function invalidate(Project $Project): void
     {
         Cache::set(self::getCachePath($Project) . '/generation', bin2hex(random_bytes(16)));
     }
 
-    private function getCacheNamespace(): string
+    public static function forgetTag(Project $Project, string $tag): void
+    {
+        Cache::clear(self::getCachePath($Project) . '/data/tag-sites/' . hash('sha256', $tag));
+    }
+
+    private function getGeneration(): string
     {
         $cachePath = self::getCachePath($this->Project);
 
         try {
             $generation = Cache::get($cachePath . '/generation');
+
+            if (is_string($generation) && $generation !== '') {
+                return $generation;
+            }
         } catch (QUI\Exception) {
-            $generation = bin2hex(random_bytes(16));
-            Cache::set($cachePath . '/generation', $generation);
         }
 
-        return $cachePath . '/' . $generation;
+        $generation = bin2hex(random_bytes(16));
+        Cache::set($cachePath . '/generation', $generation);
+
+        return $generation;
+    }
+
+    private function getCachedData(string $cacheKey, string $generation): mixed
+    {
+        try {
+            $entry = Cache::get($cacheKey);
+        } catch (QUI\Exception) {
+            return null;
+        }
+
+        if (!is_array($entry) || ($entry['generation'] ?? null) !== $generation) {
+            return null;
+        }
+
+        return $entry['data'] ?? null;
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function storeCachedData(string $cacheKey, string $generation, array $data): void
+    {
+        Cache::set($cacheKey, [
+            'generation' => $generation,
+            'data' => $data
+        ]);
     }
 
     private static function getCachePath(Project $Project): string

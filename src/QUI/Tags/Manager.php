@@ -274,6 +274,7 @@ class Manager
         }
 
         $this->clearSearchCache();
+        Search::forgetTag($this->Project, $tag);
         QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
     }
 
