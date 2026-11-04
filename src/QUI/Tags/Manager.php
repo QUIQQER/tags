@@ -145,6 +145,7 @@ class Manager
                 ]
             );
 
+            $this->clearSearchCache();
             $this->edit($tag, $params);
         } catch (QUI\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
@@ -272,7 +273,7 @@ class Manager
             unset(self::$siteTagsCache[$this->getProjectCacheKey() . '/site/' . $siteId]);
         }
 
-        $this->clearSiteIdsFromTagsRequestCache();
+        $this->clearSearchCache();
         QUI\Cache\Manager::clear('quiqqer/tags/' . md5($tag));
     }
 
@@ -399,6 +400,8 @@ class Manager
             ->where(Doctrine::quoteIdentifier('tag') . ' = :tag')
             ->setParameter('tag', $tag)
             ->executeStatement();
+
+        $this->clearSearchCache();
 
         if (isset($params['tagGroupIds'])) {
             $currentTagGroupIds = TagGroupsHandler::getGroupIdsByTag($this->Project, $tag);
@@ -1135,6 +1138,18 @@ class Manager
      */
     public function setSiteTags(string | int $siteId, array $tags): void
     {
+        try {
+            $this->persistSiteTags($siteId, $tags);
+        } finally {
+            $this->clearSearchCache();
+        }
+    }
+
+    /**
+     * @param array<int, string> $tags
+     */
+    protected function persistSiteTags(string | int $siteId, array $tags): void
+    {
         $siteId = (int)$siteId;
         $Site = $this->getSiteEdit($siteId);
         $isActive = $Site->getAttribute('active');
@@ -1287,6 +1302,18 @@ class Manager
      */
     public function removeSiteFromTags(int $siteId, array $tags): void
     {
+        try {
+            $this->removeSiteFromTagCache($siteId, $tags);
+        } finally {
+            $this->clearSearchCache();
+        }
+    }
+
+    /**
+     * @param array<int, string> $tags
+     */
+    protected function removeSiteFromTagCache(int $siteId, array $tags): void
+    {
         $this->clearSiteIdsFromTagsRequestCache();
 
         // cleanup tag cache
@@ -1373,6 +1400,8 @@ class Manager
             );
         } catch (\Exception $Exception) {
             QUI\System\Log::addError($Exception->getMessage());
+        } finally {
+            $this->clearSearchCache();
         }
     }
 
@@ -1455,6 +1484,15 @@ class Manager
     protected function getProjectCacheKey(): string
     {
         return $this->Project->getName() . '/' . $this->Project->getLang();
+    }
+
+    /**
+     * Invalidate shared search data and IDs already loaded in this request.
+     */
+    public function clearSearchCache(): void
+    {
+        $this->clearSiteIdsFromTagsRequestCache();
+        Search::invalidate($this->Project);
     }
 
     /**

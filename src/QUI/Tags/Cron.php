@@ -49,6 +49,16 @@ class Cron
 
 
         $Project = static::resolveProject($params['project'], $params['lang']);
+
+        try {
+            static::rebuildProjectCache($Project);
+        } finally {
+            (new Manager($Project))->clearSearchCache();
+        }
+    }
+
+    protected static function rebuildProjectCache(QUI\Projects\Project $Project): void
+    {
         $Connection = QUI::getDataBaseConnection();
 
         $tableSites = QUI::getDBProjectTableName('tags_sites', $Project);

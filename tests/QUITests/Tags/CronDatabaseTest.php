@@ -13,6 +13,8 @@ use PHPUnit\Framework\TestCase;
 use QUI;
 use QUI\Projects\Project;
 use QUI\Projects\Site;
+use QUI\Tags\Manager;
+use QUI\Tags\Search;
 use ReflectionProperty;
 
 class CronDatabaseTest extends TestCase
@@ -180,6 +182,25 @@ class CronDatabaseTest extends TestCase
             ['id' => 1, 'tags' => ',Alpha Tag,Beta,'],
             ['id' => 5, 'tags' => ',Alpha Tag,Alpha Tag,']
         ], $siteCache);
+    }
+
+    public function testRebuildInvalidatesSharedSearchResults(): void
+    {
+        Search::invalidate($this->Project);
+        $Manager = $this->createMock(Manager::class);
+        $Manager->expects(self::exactly(2))->method('getSiteCountFromTags')->willReturn(1, 2);
+        $Manager->expects(self::exactly(2))->method('getSiteIdsFromTags')->willReturn([]);
+        $Search = new Search($this->Project, $Manager);
+
+        self::assertSame(1, $Search->getResults(['AlphaTag'])['count']);
+
+        CronTestProxy::createCache([
+            'project' => 'tagscronphpunit',
+            'lang' => 'en'
+        ], null);
+
+        self::assertSame(2, $Search->getResults(['AlphaTag'])['count']);
+        Search::invalidate($this->Project);
     }
 
     private function createTables(?Project $Project = null): void
