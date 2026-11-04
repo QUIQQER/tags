@@ -1259,6 +1259,17 @@ class Manager
      */
     protected function getSiteTagCacheRows(array $tags): array
     {
+        return $this->getTagSiteCacheData($tags);
+    }
+
+    /**
+     * Read the existing tags' site assignments and counts in one batch.
+     *
+     * @param array<int, string> $tags
+     * @return list<array<string, mixed>>
+     */
+    public function getTagSiteCacheData(array $tags): array
+    {
         if ($tags === []) {
             return [];
         }
@@ -1271,7 +1282,8 @@ class Manager
             ->select(
                 'definitions.' . $tag,
                 'cache.' . $tag . ' AS ' . Doctrine::quoteIdentifier('cacheTag'),
-                'cache.' . $sites
+                'cache.' . $sites,
+                'cache.' . Doctrine::quoteIdentifier('count')
             )
             ->from(Doctrine::quoteIdentifier(QUI::getDBProjectTableName('tags', $this->Project)), 'definitions')
             ->leftJoin(

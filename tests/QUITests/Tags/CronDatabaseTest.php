@@ -188,8 +188,20 @@ class CronDatabaseTest extends TestCase
     {
         Search::invalidate($this->Project);
         $Manager = $this->createMock(Manager::class);
-        $Manager->expects(self::exactly(2))->method('getSiteCountFromTags')->willReturn(1, 2);
-        $Manager->expects(self::exactly(2))->method('getSiteIdsFromTags')->willReturn([]);
+        $Manager->expects(self::exactly(2))
+            ->method('getTagSiteCacheData')
+            ->willReturn(
+                [[
+                    'tag' => 'AlphaTag',
+                    'sites' => '',
+                    'count' => 1
+                ]],
+                [[
+                    'tag' => 'AlphaTag',
+                    'sites' => '',
+                    'count' => 2
+                ]]
+            );
         $Search = new Search($this->Project, $Manager);
 
         self::assertSame(1, $Search->getResults(['AlphaTag'])['count']);
