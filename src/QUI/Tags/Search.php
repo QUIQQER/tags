@@ -11,11 +11,12 @@ use QUI\Utils\Doctrine;
 use function array_slice;
 use function array_unique;
 use function array_values;
+use function arsort;
 use function bin2hex;
+use function count;
 use function explode;
 use function hash;
 use function random_bytes;
-use function serialize;
 use function sort;
 use function str_contains;
 
@@ -79,20 +80,28 @@ class Search
             ];
         }
 
-        $cacheKey = $this->getCacheNamespace() . '/results/' . hash('sha256', serialize($tags));
-
         try {
-            $data = Cache::get($cacheKey);
-        } catch (QUI\Exception) {
-            $data = [
-                'count' => $this->Manager->getSiteCountFromTags($tags),
-                'siteIds' => $this->Manager->getSiteIdsFromTags($tags)
-            ];
+            $assignments = $this->getTagAssignments($tags);
+        } catch (\Exception $Exception) {
+            QUI\System\Log::writeDebugException($Exception);
+            QUI\System\Log::addError($Exception->getMessage());
 
-            Cache::set($cacheKey, $data, self::CACHE_LIFETIME);
+            return [
+                'count' => 0,
+                'sites' => []
+            ];
         }
 
-        $siteIds = $data['siteIds'];
+        $siteIds = [];
+
+        foreach ($tags as $tag) {
+            foreach ($assignments[$tag]['siteIds'] as $id => $matches) {
+                $siteIds[$id] = ($siteIds[$id] ?? 0) + $matches;
+            }
+        }
+
+        arsort($siteIds);
+        $count = count($tags) === 1 ? $assignments[$tags[0]]['count'] : count($siteIds);
 
         if (!empty($params['limit'])) {
             $limit = (string)$params['limit'];
@@ -116,9 +125,64 @@ class Search
         }
 
         return [
-            'count' => $data['count'],
+            'count' => $count,
             'sites' => $sites
         ];
+    }
+
+    /**
+     * Reuse each tag across combinations and fetch all cache misses in one query.
+     *
+     * @param list<string> $tags
+     * @return array<string, array{count: int, siteIds: array<int, int>}>
+     */
+    private function getTagAssignments(array $tags): array
+    {
+        $cacheNamespace = $this->getCacheNamespace() . '/tag-sites/';
+        $assignments = [];
+        $missingTags = [];
+
+        foreach ($tags as $tag) {
+            try {
+                $assignments[$tag] = Cache::get($cacheNamespace . hash('sha256', $tag));
+            } catch (QUI\Exception) {
+                $missingTags[] = $tag;
+            }
+        }
+
+        if ($missingTags === []) {
+            return $assignments;
+        }
+
+        foreach ($this->Manager->getTagSiteCacheData($missingTags) as $row) {
+            $siteIds = [];
+
+            foreach (explode(',', (string)($row['sites'] ?? '')) as $id) {
+                $id = (int)$id;
+
+                if (!$id) {
+                    continue;
+                }
+
+                $siteIds[$id] = ($siteIds[$id] ?? 0) + 1;
+            }
+
+            $assignments[$row['tag']] = [
+                'count' => (int)($row['count'] ?? 0),
+                'siteIds' => $siteIds
+            ];
+        }
+
+        foreach ($missingTags as $tag) {
+            $assignments[$tag] ??= [
+                'count' => 0,
+                'siteIds' => []
+            ];
+
+            Cache::set($cacheNamespace . hash('sha256', $tag), $assignments[$tag], self::CACHE_LIFETIME);
+        }
+
+        return $assignments;
     }
 
     /**

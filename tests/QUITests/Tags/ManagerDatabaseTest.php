@@ -180,6 +180,63 @@ class ManagerDatabaseTest extends TestCase
         self::assertSame(0, $this->counter->counts()['SELECT']);
     }
 
+    public function testNewCombinationsReusePreviouslyCachedIndividualTags(): void
+    {
+        foreach ([10, 11, 12] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        (new Search($this->Project))->getResults(['AlphaTag']);
+        $this->resetManagerCaches();
+        (new Search($this->Project))->getResults(['BetaTag']);
+        $this->resetManagerCaches();
+        $this->counter->reset();
+
+        $result = (new Search($this->Project))->getResults(['BetaTag', 'AlphaTag']);
+
+        self::assertSame(3, $result['count']);
+        self::assertSame(
+            [$this->Sites[11], $this->Sites[10], $this->Sites[12]],
+            $result['sites']
+        );
+        self::assertSame(0, $this->counter->counts()['SELECT']);
+    }
+
+    public function testUncachedTagAssignmentsAreLoadedInOneBatch(): void
+    {
+        foreach ([10, 11, 12] as $id) {
+            $this->Sites[$id] = $this->createSite($id);
+        }
+
+        $this->counter->reset();
+        $result = (new Search($this->Project))->getResults(['AlphaTag', 'BetaTag', 'GammaTag']);
+
+        self::assertSame(3, $result['count']);
+        self::assertSame(1, $this->counter->counts()['SELECT']);
+    }
+
+    public function testNewCombinationFetchesOnlyPreviouslyUncachedTags(): void
+    {
+        $Manager = $this->createMock(Manager::class);
+        $requestedTags = [];
+        $Manager->expects(self::exactly(2))
+            ->method('getTagSiteCacheData')
+            ->willReturnCallback(static function (array $tags) use (&$requestedTags): array {
+                $requestedTags[] = $tags;
+
+                return [];
+            });
+
+        (new Search($this->Project, $Manager))->getResults(['AlphaTag']);
+        (new Search($this->Project, $Manager))->getResults(['GammaTag', 'AlphaTag', 'BetaTag']);
+        (new Search($this->Project, $Manager))->getResults(['BetaTag', 'GammaTag']);
+
+        self::assertSame([
+            ['AlphaTag'],
+            ['BetaTag', 'GammaTag']
+        ], $requestedTags);
+    }
+
     public function testAvailableTagsNeedNoCountsAndAreSharedAcrossRequests(): void
     {
         $this->connection->executeStatement('DROP TABLE ' . $this->cacheTable);
@@ -366,8 +423,7 @@ class ManagerDatabaseTest extends TestCase
             $Project->method('getName')->willReturn($name);
             $Project->method('getLang')->willReturn($lang);
             $Manager = $this->createMock(Manager::class);
-            $Manager->expects(self::once())->method('getSiteCountFromTags')->willReturn(0);
-            $Manager->expects(self::once())->method('getSiteIdsFromTags')->willReturn([]);
+            $Manager->expects(self::once())->method('getTagSiteCacheData')->willReturn([]);
             Search::invalidate($Project);
 
             self::assertSame(['count' => 0, 'sites' => []], (new Search($Project, $Manager))->getResults(['AlphaTag']));
@@ -377,8 +433,7 @@ class ManagerDatabaseTest extends TestCase
     public function testInvalidationDuringSearchDoesNotPublishOldResultsToNewGeneration(): void
     {
         $Manager = $this->createMock(Manager::class);
-        $Manager->expects(self::exactly(2))->method('getSiteCountFromTags')->willReturn(0);
-        $Manager->expects(self::exactly(2))->method('getSiteIdsFromTags')->willReturnCallback(
+        $Manager->expects(self::exactly(2))->method('getTagSiteCacheData')->willReturnCallback(
             function (): array {
                 Search::invalidate($this->Project);
 
@@ -394,8 +449,7 @@ class ManagerDatabaseTest extends TestCase
     public function testEmptySearchResultsAreSharedAcrossRequests(): void
     {
         $Manager = $this->createMock(Manager::class);
-        $Manager->expects(self::once())->method('getSiteCountFromTags')->willReturn(0);
-        $Manager->expects(self::once())->method('getSiteIdsFromTags')->willReturn([]);
+        $Manager->expects(self::once())->method('getTagSiteCacheData')->willReturn([]);
 
         self::assertSame(
             ['count' => 0, 'sites' => []],
