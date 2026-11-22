@@ -98,6 +98,25 @@ define('package/quiqqer/tags/bin/tags/Select', [
         },
 
         /**
+         * Apply the form's project before the parent imports the saved tags.
+         */
+        $onImport: function () {
+            const Input = this.getElm();
+            const Form = Input.form;
+
+            if (Input.dataset.considerMaxAmount === '0') {
+                this.setAttribute('considerMaxAmount', false);
+            }
+
+            if (Form && Form.dataset.projectName && Form.dataset.projectLang &&
+                !this.getAttribute('projectName') && !this.getAttribute('projectLang')) {
+                this.setProject(Projects.get(Form.dataset.projectName, Form.dataset.projectLang));
+            }
+
+            this.parent();
+        },
+
+        /**
          * Set the project
          *
          * @param {Object} Project - classes/projects/Project
